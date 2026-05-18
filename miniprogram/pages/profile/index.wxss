@@ -1,0 +1,58 @@
+.profile-card {
+  display: flex;
+  align-items: center;
+  padding: 28rpx;
+  margin-bottom: 30rpx;
+}
+
+.avatar {
+  width: 96rpx;
+  height: 96rpx;
+  line-height: 96rpx;
+  text-align: center;
+  border-radius: 8rpx;
+  background: #0f766e;
+  color: #ffffff;
+  font-size: 36rpx;
+  font-weight: 700;
+}
+
+.name {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #111827;
+}
+
+.contact {
+  margin-top: 8rpx;
+  color: #667085;
+  font-size: 25rpx;
+}
+
+.action-btn {
+  width: 100%;
+  margin-bottom: 18rpx;
+}
+
+.rule-card,
+.api-card {
+  padding: 8rpx 24rpx;
+}
+
+.rule,
+.api-line {
+  padding: 20rpx 0;
+  border-top: 1rpx solid #eef2f6;
+  font-size: 26rpx;
+  color: #344054;
+}
+
+.rule:first-child, .api-line:first-child {
+  border-top: 0;
+}
+
+.api-line {
+  font-family: Consolas, "Courier New", monospace;
+  color: #0f766e;
+}
+

@@ -1,0 +1,74 @@
+.head-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.desc {
+  margin: 4rpx 0 24rpx;
+  color: #667085;
+  font-size: 25rpx;
+  line-height: 1.5;
+}
+
+.logout-btn {
+  width: 110rpx;
+  height: 60rpx;
+  line-height: 60rpx;
+  border-radius: 8rpx;
+  background: #f2f4f7;
+  color: #475467;
+  font-size: 24rpx;
+}
+
+.review-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.review-card {
+  padding: 24rpx;
+}
+
+.top {
+  display: flex;
+  justify-content: space-between;
+}
+
+.company {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #111827;
+}
+
+.meta,
+.time {
+  margin-top: 10rpx;
+  color: #667085;
+  font-size: 25rpx;
+}
+
+.actions {
+  display: flex;
+  margin-top: 22rpx;
+}
+
+.reject-btn,
+.approve-btn {
+  height: 72rpx;
+  line-height: 72rpx;
+  border-radius: 8rpx;
+  font-size: 26rpx;
+}
+
+.reject-btn {
+  background: #fef3f2;
+  color: #b42318;
+}
+
+.approve-btn {
+  background: #0f766e;
+  color: #ffffff;
+}
+
+

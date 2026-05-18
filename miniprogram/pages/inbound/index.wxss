@@ -1,0 +1,293 @@
+.desc {
+  margin-bottom: 20rpx;
+  color: #667085;
+  font-size: 25rpx;
+  line-height: 1.6;
+}
+
+.filter-bar {
+  position: relative;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: stretch;
+  margin: 0 -24rpx 20rpx;
+  padding: 16rpx 24rpx;
+  background: #f5f7fa;
+  border-bottom: 1rpx solid #e5e7eb;
+}
+
+picker {
+  flex: 1;
+}
+
+.picker-box {
+  min-height: 82rpx;
+  box-sizing: border-box;
+  padding: 12rpx 18rpx;
+  border: 1rpx solid #d0d5dd;
+  border-radius: 8rpx;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.picker-label {
+  font-size: 22rpx;
+  color: #98a2b3;
+}
+
+.picker-value {
+  margin-top: 4rpx;
+  font-size: 28rpx;
+  color: #111827;
+  font-weight: 600;
+}
+
+.picker-arrow {
+  color: #667085;
+  font-size: 26rpx;
+}
+
+.clear-btn {
+  width: 116rpx;
+  height: 82rpx;
+  line-height: 82rpx;
+  border-radius: 8rpx;
+  background: #eef6f5;
+  color: #0f766e;
+  font-size: 25rpx;
+}
+
+.plan-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.empty-card {
+  padding: 34rpx 24rpx;
+}
+
+.empty-title {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #111827;
+}
+
+.empty-desc {
+  margin-top: 12rpx;
+  font-size: 25rpx;
+  color: #667085;
+  line-height: 1.6;
+}
+
+.empty-btn {
+  width: 100%;
+  margin-top: 24rpx;
+}
+
+.login-info {
+  color: #667085;
+  font-size: 24rpx;
+  padding: 0 4rpx 4rpx;
+}
+
+.plan-card {
+  overflow: hidden;
+}
+
+.plan-head {
+  display: flex;
+  justify-content: space-between;
+  padding: 24rpx;
+}
+
+.eta {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #111827;
+}
+
+.batch {
+  margin-top: 10rpx;
+  font-size: 25rpx;
+  color: #667085;
+}
+
+.model-list {
+  border-top: 1rpx solid #eef2f6;
+}
+
+.model-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx;
+  border-top: 1rpx solid #eef2f6;
+}
+
+.model-row:first-child {
+  border-top: 0;
+}
+
+.model {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #344054;
+}
+
+.model-desc {
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  color: #98a2b3;
+}
+
+.qty {
+  min-width: 96rpx;
+  text-align: right;
+  font-size: 42rpx;
+  font-weight: 700;
+  color: #0f766e;
+}
+
+.empty {
+  padding: 80rpx 0;
+  text-align: center;
+  font-size: 26rpx;
+}
+
+.cart-btn {
+  min-width: 156rpx;
+  height: 82rpx;
+  line-height: 82rpx;
+  padding: 0 18rpx;
+  border-radius: 8rpx;
+  background: #0f766e;
+  color: #ffffff;
+  font-size: 25rpx;
+}
+
+.qty-wrap {
+  min-width: 104rpx;
+  text-align: right;
+}
+
+.qty-label {
+  margin-top: 2rpx;
+  color: #98a2b3;
+  font-size: 22rpx;
+}
+
+.quantity-mask {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40rpx;
+  box-sizing: border-box;
+  background: rgba(17, 24, 39, 0.46);
+}
+
+.quantity-dialog {
+  width: 100%;
+  max-width: 640rpx;
+  box-sizing: border-box;
+  padding: 32rpx 28rpx 28rpx;
+  border-radius: 8rpx;
+  background: #ffffff;
+}
+
+.quantity-title {
+  color: #111827;
+  font-size: 32rpx;
+  font-weight: 700;
+}
+
+.quantity-model {
+  margin-top: 18rpx;
+  color: #111827;
+  font-size: 30rpx;
+  font-weight: 700;
+  word-break: break-all;
+}
+
+.quantity-meta,
+.quantity-limit {
+  margin-top: 10rpx;
+  color: #667085;
+  font-size: 24rpx;
+  line-height: 1.5;
+}
+
+.quantity-stepper {
+  display: flex;
+  align-items: center;
+  margin-top: 28rpx;
+  border: 1rpx solid #d0d5dd;
+  border-radius: 8rpx;
+  overflow: hidden;
+}
+
+.quantity-step {
+  width: 108rpx;
+  height: 88rpx;
+  line-height: 88rpx;
+  padding: 0;
+  border-radius: 0;
+  background: #f9fafb;
+  color: #111827;
+  font-size: 36rpx;
+}
+
+.quantity-input {
+  flex: 1;
+  height: 88rpx;
+  min-width: 0;
+  text-align: center;
+  color: #111827;
+  font-size: 32rpx;
+  font-weight: 700;
+  border-left: 1rpx solid #d0d5dd;
+  border-right: 1rpx solid #d0d5dd;
+}
+
+.quantity-selected {
+  margin-top: 16rpx;
+  text-align: center;
+  color: #0f766e;
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.quantity-actions {
+  display: flex;
+  margin-top: 28rpx;
+}
+
+.quantity-cancel,
+.quantity-confirm {
+  flex: 1;
+  height: 82rpx;
+  line-height: 82rpx;
+  padding: 0;
+  border-radius: 8rpx;
+  font-size: 28rpx;
+}
+
+.quantity-cancel {
+  margin-right: 16rpx;
+  background: #f2f4f7;
+  color: #344054;
+}
+
+.quantity-confirm {
+  background: #0f766e;
+  color: #ffffff;
+}
+

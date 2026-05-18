@@ -1,0 +1,131 @@
+.hint {
+  margin-bottom: 20rpx;
+  color: #667085;
+  font-size: 25rpx;
+  line-height: 1.6;
+}
+
+.cart-card,
+.form-card {
+  padding: 8rpx 24rpx;
+  margin-bottom: 20rpx;
+}
+
+.cart-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18rpx 0;
+}
+
+.card-title {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #111827;
+}
+
+.total,
+.limit,
+.meta {
+  color: #667085;
+  font-size: 24rpx;
+}
+
+.empty-cart {
+  padding: 40rpx 0;
+  color: #98a2b3;
+  text-align: center;
+  font-size: 26rpx;
+}
+
+.cart-row {
+  display: flex;
+  align-items: center;
+  padding: 22rpx 0;
+  border-top: 1rpx solid #eef2f6;
+}
+
+.cart-info {
+  flex: 1;
+  min-width: 0;
+  padding-right: 16rpx;
+}
+
+.model {
+  color: #111827;
+  font-size: 28rpx;
+  font-weight: 700;
+  word-break: break-all;
+}
+
+.stepper {
+  width: 176rpx;
+  display: flex;
+  align-items: center;
+  border: 1rpx solid #d0d5dd;
+  border-radius: 8rpx;
+  overflow: hidden;
+}
+
+.stepper button {
+  width: 52rpx;
+  height: 52rpx;
+  line-height: 52rpx;
+  padding: 0;
+  border-radius: 0;
+  background: #f9fafb;
+  color: #111827;
+  font-size: 28rpx;
+}
+
+.stepper text {
+  flex: 1;
+  text-align: center;
+  color: #111827;
+  font-size: 26rpx;
+}
+
+.remove {
+  width: 88rpx;
+  height: 56rpx;
+  line-height: 56rpx;
+  margin-left: 16rpx;
+  padding: 0;
+  border-radius: 8rpx;
+  background: #fff1f2;
+  color: #be123c;
+  font-size: 24rpx;
+}
+
+.field {
+  padding: 22rpx 0;
+  border-top: 1rpx solid #eef2f6;
+}
+
+.field:first-child {
+  border-top: 0;
+}
+
+.label {
+  margin-bottom: 12rpx;
+  color: #344054;
+  font-size: 25rpx;
+  font-weight: 600;
+}
+
+input {
+  height: 72rpx;
+  font-size: 28rpx;
+}
+
+textarea {
+  width: 100%;
+  min-height: 150rpx;
+  font-size: 28rpx;
+}
+
+.submit-btn {
+  width: 100%;
+  margin-top: 28rpx;
+}
+

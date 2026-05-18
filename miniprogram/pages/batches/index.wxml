@@ -1,0 +1,30 @@
+<view class="page">
+  <view class="section-title">在制批次</view>
+  <view class="desc">按生产批次展示在制数量和可绑定数量，经销商只能看到未绑定可订部分。</view>
+
+  <view class="batch-list">
+    <view class="card batch-card" wx:for="{{batches}}" wx:key="batchNo">
+      <view class="top">
+        <view>
+          <view class="batch-no">{{item.batchNo}}</view>
+          <view class="line">{{item.line}} · {{item.model}}</view>
+        </view>
+        <view class="tag warn">{{item.progress}}%</view>
+      </view>
+      <view class="numbers">
+        <view>
+          <view class="num">{{item.total}}</view>
+          <view class="label">批次数量</view>
+        </view>
+        <view>
+          <view class="num accent">{{item.available}}</view>
+          <view class="label">可订未绑定</view>
+        </view>
+      </view>
+      <view class="progress">
+        <view class="progress-bar" style="width: {{item.progress}}%;"></view>
+      </view>
+      <view class="eta">预计完工：{{item.eta}}</view>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,29 @@
+<view class="page">
+  <view class="head-row">
+    <view>
+      <view class="section-title">经销商注册审核</view>
+      <view class="desc">只有审核通过的手机号才能登录普通经销商账号。</view>
+    </view>
+    <button class="logout-btn" bindtap="logout">退出</button>
+  </view>
+
+  <view class="review-list">
+    <view class="card review-card" wx:for="{{applications}}" wx:key="id">
+      <view class="top">
+        <view>
+          <view class="company">{{item.companyName}}</view>
+          <view class="meta">{{item.contactName}} · {{item.phone}}</view>
+          <view class="meta">所在地区：{{item.region || '-'}}</view>
+        </view>
+        <view class="tag {{item.status === 'pending' ? 'warn' : item.status === 'rejected' ? 'gray' : ''}}">
+          {{item.status === 'approved' ? '已通过' : item.status === 'rejected' ? '已拒绝' : '待审核'}}
+        </view>
+      </view>
+      <view class="time">申请时间：{{item.createdAt}}</view>
+      <view wx:if="{{item.status === 'pending'}}" class="actions">
+        <button class="reject-btn" data-id="{{item.id}}" data-status="rejected" bindtap="review">拒绝</button>
+        <button class="approve-btn" data-id="{{item.id}}" data-status="approved" bindtap="review">通过</button>
+      </view>
+    </view>
+  </view>
+</view>

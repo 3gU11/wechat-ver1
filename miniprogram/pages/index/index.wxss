@@ -1,0 +1,117 @@
+.login-panel {
+  padding-top: 46rpx;
+}
+
+.login-title {
+  font-size: 46rpx;
+  font-weight: 700;
+  color: #111827;
+}
+
+.login-desc {
+  margin: 14rpx 0 34rpx;
+  color: #667085;
+  font-size: 26rpx;
+  line-height: 1.6;
+}
+
+.form-card {
+  padding: 8rpx 24rpx;
+}
+
+.field {
+  padding: 24rpx 0;
+  border-top: 1rpx solid #eef2f6;
+}
+
+.field:first-child {
+  border-top: 0;
+}
+
+.label {
+  margin-bottom: 12rpx;
+  color: #344054;
+  font-size: 25rpx;
+  font-weight: 600;
+}
+
+input {
+  height: 72rpx;
+  font-size: 28rpx;
+}
+
+.login-btn {
+  width: 100%;
+  margin-top: 24rpx;
+}
+
+.status-text {
+  margin-top: 18rpx;
+  padding: 18rpx 20rpx;
+  border-radius: 8rpx;
+  background: #f2f4f7;
+  color: #344054;
+  font-size: 25rpx;
+  line-height: 1.5;
+}
+
+.demo {
+  margin-top: 36rpx;
+  font-size: 24rpx;
+  line-height: 1.8;
+}
+
+.hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 8rpx 0 24rpx;
+}
+
+.hero-title {
+  font-size: 42rpx;
+  font-weight: 700;
+  color: #111827;
+}
+
+.hero-subtitle {
+  margin-top: 10rpx;
+  font-size: 26rpx;
+  color: #667085;
+  line-height: 1.5;
+}
+
+.action-btn {
+  width: 100%;
+  margin-top: 28rpx;
+}
+
+.table-card {
+  overflow: hidden;
+}
+
+.table-row {
+  display: flex;
+  padding: 22rpx 24rpx;
+  border-top: 1rpx solid #eef2f6;
+  font-size: 27rpx;
+}
+
+.table-row:first-child {
+  border-top: 0;
+}
+
+.table-head {
+  background: #f8fafc;
+  color: #667085;
+  font-size: 24rpx;
+}
+
+
+.table-row text {
+  flex: 1;
+}
+
+.table-row text:first-child {
+  flex: 1.3;
+}

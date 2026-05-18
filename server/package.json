@@ -1,0 +1,13 @@
+{
+  "name": "dealer-portal-api",
+  "version": "1.0.0",
+  "private": true,
+  "main": "dealer_api_node.js",
+  "scripts": {
+    "start": "node dealer_api_node.js",
+    "sync:wechat": "node sync_wechat_batch_summary.js"
+  },
+  "dependencies": {
+    "mysql2": "^3.11.5"
+  }
+}

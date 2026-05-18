@@ -1,0 +1,34 @@
+<view class="page">
+  <view wx:if="{{!account}}" class="card rule-card">
+    <view class="rule">请先在“总览”页登录账号</view>
+  </view>
+
+  <view wx:else class="card profile-card">
+    <view class="avatar">经</view>
+    <view>
+      <view class="name">{{account.name || '经销商账号'}}</view>
+      <view class="contact">{{account.phone}} · {{account.role === 'admin' ? '管理员' : '普通经销商'}}</view>
+      <view wx:if="{{account.region}}" class="contact">所在地区：{{account.region}}</view>
+    </view>
+  </view>
+
+  <button wx:if="{{account.role === 'admin'}}" class="primary-btn action-btn" bindtap="goAdminReviews">进入经销商审核</button>
+  <button class="secondary-btn action-btn" bindtap="logout">退出登录</button>
+
+  <view class="section-title">门户边界</view>
+  <view class="card rule-card">
+    <view class="rule">普通经销商只看机型和可订数量</view>
+    <view class="rule">注册申请必须由 admin 审核通过</view>
+    <view class="rule">订单提交后进入审核，不直接修改库存</view>
+    <view class="rule">所有写操作通过经销商 API 进入 FastAPI 业务中台</view>
+  </view>
+
+  <view class="section-title">接口接入</view>
+  <view class="card api-card">
+    <view class="api-line">POST /auth/login</view>
+    <view class="api-line">POST /auth/register</view>
+    <view class="api-line">GET /inventory/available-models</view>
+    <view class="api-line">POST /orders</view>
+    <view class="api-line">POST /admin/dealers/:id/review</view>
+  </view>
+</view>

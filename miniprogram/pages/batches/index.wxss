@@ -1,0 +1,70 @@
+.desc {
+  margin-bottom: 20rpx;
+  color: #667085;
+  font-size: 25rpx;
+  line-height: 1.6;
+}
+
+.batch-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.batch-card {
+  padding: 24rpx;
+}
+
+.top {
+  display: flex;
+  justify-content: space-between;
+}
+
+.batch-no {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #111827;
+}
+
+.line,
+.eta {
+  margin-top: 10rpx;
+  color: #667085;
+  font-size: 25rpx;
+}
+
+.numbers {
+  display: flex;
+  margin: 24rpx 0;
+}
+
+.num {
+  font-size: 38rpx;
+  font-weight: 700;
+  color: #344054;
+}
+
+.num.accent {
+  color: #0f766e;
+}
+
+.label {
+  margin-top: 8rpx;
+  color: #98a2b3;
+  font-size: 23rpx;
+}
+
+.progress {
+  height: 12rpx;
+  border-radius: 999rpx;
+  background: #eef2f6;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  border-radius: 999rpx;
+  background: #0f766e;
+}
+
+
+

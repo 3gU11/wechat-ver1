@@ -1,0 +1,105 @@
+﻿<view class="page">
+  <view class="section-title">按预计入库时间订购</view>
+  <view class="desc">成品和在制分开展示。选择机型加入购物车后，可在购物车统一提交订单。</view>
+
+  <view wx:if="{{isLoggedIn}}" class="filter-bar">
+    <picker mode="selector" range="{{modelOptions}}" value="{{selectedModelIndex}}" bindchange="onModelChange">
+      <view class="picker-box">
+        <view>
+          <view class="picker-label">按机型筛选</view>
+          <view class="picker-value">{{selectedModel || '全部机型'}}</view>
+        </view>
+        <view class="picker-arrow">›</view>
+      </view>
+    </picker>
+    <button wx:if="{{selectedModel}}" class="clear-btn" bindtap="clearModelFilter">清除</button>
+    <button class="cart-btn" bindtap="goCart">购物车 {{cartCount}}</button>
+  </view>
+
+  <view wx:if="{{!isLoggedIn}}" class="card empty-card">
+    <view class="empty-title">请先登录</view>
+    <view class="empty-desc">登录后可查看预计入库时间、批次号和对应机型数量。</view>
+    <button class="secondary-btn empty-btn" bindtap="goLogin">去总览登录</button>
+  </view>
+
+  <view wx:elif="{{loadError}}" class="card empty-card">
+    <view class="empty-title">数据加载失败</view>
+    <view class="empty-desc">{{loadError}}</view>
+    <button class="secondary-btn empty-btn" bindtap="loadPlans">重新加载</button>
+  </view>
+
+  <view wx:elif="{{!filteredPlans.length && !loading}}" class="card empty-card">
+    <view class="empty-title">暂无预计入库数据</view>
+    <view class="empty-desc">{{emptyDesc}}</view>
+  </view>
+
+  <view wx:else class="plan-list">
+    <view class="login-info">当前账号：{{accountName}}</view>
+    <view class="card plan-card" wx:for="{{filteredPlans}}" wx:key="id">
+      <view class="plan-head" data-id="{{item.id}}" bindtap="togglePlan">
+        <view>
+          <view class="eta">{{item.eta}}</view>
+          <view class="batch">批次号：{{item.batchNo}}</view>
+        </view>
+        <view class="tag {{item.inventoryType === 'wip' ? 'warn' : ''}}">
+          {{item.inventoryType === 'finished' ? '成品' : '在制'}}
+        </view>
+      </view>
+
+      <view wx:if="{{openedId === item.id}}" class="model-list">
+        <view
+          class="model-row"
+          wx:for="{{item.items}}"
+          wx:for-item="modelItem"
+          wx:key="model"
+          data-model="{{modelItem.model}}"
+          data-batch-no="{{modelItem.batchNo || item.batchNo}}"
+          data-eta="{{modelItem.eta || item.eta}}"
+          data-inventory-type="{{modelItem.heightened ? 'heightened' : item.inventoryType}}"
+          data-available="{{modelItem.available}}"
+          bindtap="createOrder"
+        >
+          <view>
+            <view class="model">{{modelItem.model}}</view>
+            <view wx:if="{{modelItem.heightened}}" class="model-desc">
+              原批次：{{modelItem.batchNo || '-'}} · 预计入库：{{modelItem.eta || '-'}}
+            </view>
+            <view wx:else class="model-desc">加入购物车</view>
+          </view>
+          <view class="qty-wrap">
+            <view class="qty">{{modelItem.available}}</view>
+            <view class="qty-label">可订</view>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{quantityModalVisible}}" class="quantity-mask" catchtap="closeQuantityModal">
+    <view class="quantity-dialog" catchtap="stopModalTap">
+      <view class="quantity-title">选择数量</view>
+      <view class="quantity-model">{{pendingItem.model}}</view>
+      <view class="quantity-meta">
+        {{pendingItem.inventoryType === 'finished' ? '成品现货' : (pendingItem.inventoryType === 'heightened' ? '加高' : '在制')}} · {{pendingItem.batchNo || '-'}} · {{pendingItem.eta || '-'}}
+      </view>
+      <view class="quantity-limit">本次最多可加 {{selectedAvailable}} 台</view>
+
+      <view class="quantity-stepper">
+        <button class="quantity-step" bindtap="decreaseQuantity">-</button>
+        <input
+          class="quantity-input"
+          type="number"
+          value="{{selectedQuantity}}"
+          bindinput="onQuantityInput"
+        />
+        <button class="quantity-step" bindtap="increaseQuantity">+</button>
+      </view>
+      <view class="quantity-selected">已选 {{selectedQuantity}} 台</view>
+
+      <view class="quantity-actions">
+        <button class="quantity-cancel" bindtap="closeQuantityModal">取消</button>
+        <button class="quantity-confirm" bindtap="confirmAddToCart">确认加入</button>
+      </view>
+    </view>
+  </view>
+</view>

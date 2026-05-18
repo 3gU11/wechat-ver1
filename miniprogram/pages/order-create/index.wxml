@@ -1,0 +1,50 @@
+﻿<view class="page">
+  <view class="section-title">购物车提交订单</view>
+  <view class="hint">同一个订单号可以包含多个批次或机型。数量不能超过当前可订数量。</view>
+
+  <view class="card cart-card">
+    <view class="cart-head">
+      <view class="card-title">购物车</view>
+      <view class="total">共 {{totalQty}} 台</view>
+    </view>
+    <view wx:if="{{!cart.length}}" class="empty-cart">购物车为空，请先从预计入库页面选择机型。</view>
+    <view wx:for="{{cart}}" wx:key="model" class="cart-row">
+      <view class="cart-info">
+        <view class="model">{{item.model}}</view>
+        <view class="meta">{{item.inventoryType === 'finished' ? '成品现货' : (item.inventoryType === 'heightened' ? '加高' : '在制')}} · {{item.batchNo || '-'}} · {{item.eta || '-'}}</view>
+        <view class="limit">可订 {{item.available}} 台</view>
+      </view>
+      <view class="stepper">
+        <button data-index="{{index}}" data-delta="-1" bindtap="changeQty">-</button>
+        <text>{{item.quantity}}</text>
+        <button data-index="{{index}}" data-delta="1" bindtap="changeQty">+</button>
+      </view>
+      <button class="remove" data-index="{{index}}" bindtap="removeItem">移除</button>
+    </view>
+  </view>
+
+  <view class="card form-card">
+    <view class="field">
+      <view class="label">客户名称</view>
+      <input placeholder="终端客户或项目名称" data-field="customerName" bindinput="onInput" />
+    </view>
+    <view class="field">
+      <view class="label">联系人</view>
+      <input placeholder="客户联系人" data-field="contactName" bindinput="onInput" />
+    </view>
+    <view class="field">
+      <view class="label">联系电话</view>
+      <input placeholder="手机号或座机" type="number" data-field="contactPhone" bindinput="onInput" />
+    </view>
+    <view class="field">
+      <view class="label">期望交期</view>
+      <input placeholder="例如 2026-05-30" data-field="deliveryDate" bindinput="onInput" />
+    </view>
+    <view class="field">
+      <view class="label">备注</view>
+      <textarea placeholder="配置要求、付款信息、运输要求等" data-field="remark" bindinput="onInput"></textarea>
+    </view>
+  </view>
+
+  <button class="primary-btn submit-btn" loading="{{submitting}}" bindtap="submit">提交订单</button>
+</view>

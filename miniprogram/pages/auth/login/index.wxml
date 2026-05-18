@@ -1,0 +1,24 @@
+<view class="page login-page">
+  <view class="login-title">经销商登录</view>
+  <view class="login-desc">普通经销商使用手机号登录，审核通过后才可进入小程序。</view>
+
+  <view class="card form-card">
+    <view class="field">
+      <view class="label">手机号 / admin</view>
+      <input placeholder="请输入手机号" value="{{phone}}" bindinput="onPhoneInput" />
+    </view>
+    <view class="field">
+      <view class="label">验证码 / 密码</view>
+      <input placeholder="演示验证码 123456，admin 密码 admin123" password value="{{password}}" bindinput="onPasswordInput" />
+    </view>
+  </view>
+
+  <button class="primary-btn login-btn" loading="{{submitting}}" bindtap="login">登录</button>
+  <view wx:if="{{statusText}}" class="status-text">{{statusText}}</view>
+  <button class="secondary-btn register-btn" bindtap="goRegister">申请成为经销商</button>
+
+  <view class="demo muted">
+    <view>演示经销商：13800000000 / 123456</view>
+    <view>演示管理员：admin / admin123</view>
+  </view>
+</view>

@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+server/node_modules/
+
+# Environment and local secrets
+.env
+*.local
+server/.env
+
+# Logs
+*.log
+server/*.log
+
+# WeChat DevTools local config
+project.private.config.json
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

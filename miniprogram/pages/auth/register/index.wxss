@@ -1,0 +1,43 @@
+.hint {
+  margin-bottom: 20rpx;
+  color: #667085;
+  font-size: 25rpx;
+  line-height: 1.6;
+}
+
+.form-card {
+  padding: 8rpx 24rpx;
+}
+
+.field {
+  padding: 22rpx 0;
+  border-top: 1rpx solid #eef2f6;
+}
+
+.field:first-child {
+  border-top: 0;
+}
+
+.label {
+  margin-bottom: 12rpx;
+  color: #344054;
+  font-size: 25rpx;
+  font-weight: 600;
+}
+
+input {
+  height: 72rpx;
+  font-size: 28rpx;
+}
+
+textarea {
+  width: 100%;
+  min-height: 150rpx;
+  font-size: 28rpx;
+}
+
+.submit-btn {
+  width: 100%;
+  margin-top: 28rpx;
+}
+

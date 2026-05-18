@@ -1,0 +1,25 @@
+<view class="page">
+  <view class="section-title">可订机型</view>
+
+  <view class="filter card">
+    <view class="search-row">
+      <input class="search-input" placeholder="输入机型，如 DK7745" value="{{modelKeyword}}" bindinput="onModelInput" />
+      <button class="search-btn" bindtap="search">筛选</button>
+    </view>
+  </view>
+
+  <view class="model-list">
+    <view class="card model-card" wx:for="{{models}}" wx:key="model">
+      <view class="model-head">
+        <view>
+          <view class="model">{{item.model}}</view>
+          <view class="serial">成品 {{item.finished}} 台 · 在制 {{item.wip}} 台</view>
+        </view>
+        <view class="qty">{{item.available}}</view>
+      </view>
+      <button class="primary-btn bind-btn" data-model="{{item.model}}" bindtap="createOrder">按此机型提交订单</button>
+    </view>
+  </view>
+
+  <view wx:if="{{!loading && models.length === 0}}" class="empty muted">暂无符合条件的可订机型</view>
+</view>

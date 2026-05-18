@@ -1,0 +1,55 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/inbound/index",
+    "pages/machines/index",
+    "pages/batches/index",
+    "pages/order-create/index",
+    "pages/orders/index",
+    "pages/profile/index",
+    "pages/auth/login/index",
+    "pages/auth/register/index",
+    "pages/admin/reviews/index"
+  ],
+  "window": {
+    "backgroundColor": "#F5F7FA",
+    "backgroundTextStyle": "dark",
+    "navigationBarBackgroundColor": "#FFFFFF",
+    "navigationBarTitleText": "???????",
+    "navigationBarTextStyle": "black"
+  },
+  "tabBar": {
+    "color": "#667085",
+    "selectedColor": "#0F766E",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "??",
+        "iconPath": "images/icons/home.png",
+        "selectedIconPath": "images/icons/home-active.png"
+      },
+      {
+        "pagePath": "pages/inbound/index",
+        "text": "????",
+        "iconPath": "images/icons/goods.png",
+        "selectedIconPath": "images/icons/goods-active.png"
+      },
+      {
+        "pagePath": "pages/orders/index",
+        "text": "??",
+        "iconPath": "images/icons/business.png",
+        "selectedIconPath": "images/icons/business-active.png"
+      },
+      {
+        "pagePath": "pages/profile/index",
+        "text": "??",
+        "iconPath": "images/icons/usercenter.png",
+        "selectedIconPath": "images/icons/usercenter-active.png"
+      }
+    ]
+  },
+  "sitemapLocation": "sitemap.json",
+  "style": "v2"
+}
