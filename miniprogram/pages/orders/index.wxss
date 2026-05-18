@@ -63,3 +63,38 @@
   line-height: 1.5;
 }
 
+.review-note {
+  margin-top: 10rpx;
+  padding: 12rpx 14rpx;
+  border-radius: 8rpx;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 24rpx;
+  line-height: 1.5;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16rpx;
+  margin-top: 20rpx;
+}
+
+.approve-btn,
+.reject-btn {
+  width: 160rpx;
+  height: 60rpx;
+  line-height: 60rpx;
+  border-radius: 8rpx;
+  color: #ffffff;
+  font-size: 24rpx;
+}
+
+.approve-btn {
+  background: #0f766e;
+}
+
+.reject-btn {
+  background: #b42318;
+}
+

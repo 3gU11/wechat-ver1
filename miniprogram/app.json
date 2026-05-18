@@ -15,7 +15,7 @@
     "backgroundColor": "#F5F7FA",
     "backgroundTextStyle": "dark",
     "navigationBarBackgroundColor": "#FFFFFF",
-    "navigationBarTitleText": "???????",
+    "navigationBarTitleText": "\u5e93\u5b58\u67e5\u770b\u52a9\u624b",
     "navigationBarTextStyle": "black"
   },
   "tabBar": {
@@ -26,25 +26,25 @@
     "list": [
       {
         "pagePath": "pages/index/index",
-        "text": "??",
+        "text": "\u9996\u9875",
         "iconPath": "images/icons/home.png",
         "selectedIconPath": "images/icons/home-active.png"
       },
       {
         "pagePath": "pages/inbound/index",
-        "text": "????",
+        "text": "\u9884\u8ba1\u5165\u5e93",
         "iconPath": "images/icons/goods.png",
         "selectedIconPath": "images/icons/goods-active.png"
       },
       {
         "pagePath": "pages/orders/index",
-        "text": "??",
+        "text": "\u8ba2\u5355",
         "iconPath": "images/icons/business.png",
         "selectedIconPath": "images/icons/business-active.png"
       },
       {
         "pagePath": "pages/profile/index",
-        "text": "??",
+        "text": "\u6211\u7684",
         "iconPath": "images/icons/usercenter.png",
         "selectedIconPath": "images/icons/usercenter-active.png"
       }

@@ -2,6 +2,9 @@
 App({
   globalData: {
     apiBaseUrl: "https://api.wechat-ver1.com/api/dealer",
+    cloudEnv: "prod-d8g4equko61c410ed",
+    cloudService: "sever",
+    apiPathPrefix: "/api/dealer",
     token: "",
     account: null,
     sessionLoaded: false
@@ -9,6 +12,11 @@ App({
   sessionCallbacks: [],
 
   onLaunch() {
+    if (wx.cloud && wx.cloud.init) {
+      wx.cloud.init({
+        env: this.globalData.cloudEnv
+      });
+    }
     wx.getStorage({
       key: "portalSession",
       success: res => {

@@ -8,17 +8,23 @@
     <view class="card order-card" wx:for="{{orders}}" wx:key="id">
       <view class="order-top">
         <view class="order-id">{{item.id}}</view>
-        <view class="tag {{item.status === 'pending' ? 'warn' : ''}}">{{statusMap[item.status] || item.status}}</view>
+        <view class="tag {{item.status === 'regional_pending' || item.status === 'pending' ? 'warn' : item.status === 'regional_rejected' || item.status === 'rejected' ? 'gray' : ''}}">{{statusMap[item.status] || item.status}}</view>
       </view>
       <view class="customer">{{item.customerName}}</view>
       <view wx:if="{{item.dealerName}}" class="meta">经销商：{{item.dealerName}}</view>
       <view wx:if="{{item.regionalManagerName}}" class="meta">所属大区经理：{{item.regionalManagerName}}</view>
+      <view wx:if="{{item.regionalReviewedBy}}" class="meta">大区初审：{{item.regionalReviewedBy}} · {{item.regionalReviewedAt || '-'}}</view>
+      <view wx:if="{{item.regionalReviewNote}}" class="review-note">初审备注：{{item.regionalReviewNote}}</view>
       <view class="meta">合计 {{item.quantity}} 台 · {{item.itemCount || 1}} 行</view>
       <view wx:for="{{item.items}}" wx:for-item="line" wx:key="lineNo" class="line-item">
         <view>{{line.model}} · {{line.quantity}} 台</view>
         <view>{{line.inventoryType === 'finished' ? '成品现货' : (line.inventoryType === 'heightened' ? '加高' : '在制')}} · {{line.batchNo || '-'}} · {{line.eta || '-'}}</view>
       </view>
       <view class="time">提交时间：{{item.createdAt}}</view>
+      <view wx:if="{{isRegionalManager && item.status === 'regional_pending'}}" class="actions">
+        <button class="reject-btn" data-id="{{item.id}}" data-status="rejected" loading="{{reviewingId === item.id}}" disabled="{{reviewingId !== ''}}" bindtap="reviewOrder">驳回</button>
+        <button class="approve-btn" data-id="{{item.id}}" data-status="approved" loading="{{reviewingId === item.id}}" disabled="{{reviewingId !== ''}}" bindtap="reviewOrder">通过初审</button>
+      </view>
     </view>
   </view>
 

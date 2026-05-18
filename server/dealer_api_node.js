@@ -198,6 +198,10 @@ async function ensureDealerOrdersTable(connection) {
       delivery_date VARCHAR(64) DEFAULT '',
       remark TEXT,
       status VARCHAR(32) NOT NULL DEFAULT 'pending',
+      regional_review_status VARCHAR(32) NOT NULL DEFAULT 'pending',
+      regional_review_note TEXT,
+      regional_reviewed_by VARCHAR(128) DEFAULT '',
+      regional_reviewed_at DATETIME NULL,
       reviewed_at DATETIME NULL,
       reviewed_by VARCHAR(128) DEFAULT '',
       contract_no VARCHAR(128) DEFAULT '',
@@ -221,6 +225,10 @@ async function ensureDealerOrdersTable(connection) {
     ["regional_manager_name", "ALTER TABLE dealer_orders ADD COLUMN regional_manager_name VARCHAR(128) DEFAULT '' AFTER dealer_phone"],
     ["approved_qty", "ALTER TABLE dealer_orders ADD COLUMN approved_qty INT NOT NULL DEFAULT 0 AFTER quantity"],
     ["allocated_qty", "ALTER TABLE dealer_orders ADD COLUMN allocated_qty INT NOT NULL DEFAULT 0 AFTER approved_qty"],
+    ["regional_review_status", "ALTER TABLE dealer_orders ADD COLUMN regional_review_status VARCHAR(32) NOT NULL DEFAULT 'pending' AFTER status"],
+    ["regional_review_note", "ALTER TABLE dealer_orders ADD COLUMN regional_review_note TEXT AFTER regional_review_status"],
+    ["regional_reviewed_by", "ALTER TABLE dealer_orders ADD COLUMN regional_reviewed_by VARCHAR(128) DEFAULT '' AFTER regional_review_note"],
+    ["regional_reviewed_at", "ALTER TABLE dealer_orders ADD COLUMN regional_reviewed_at DATETIME NULL AFTER regional_reviewed_by"],
     ["reviewed_at", "ALTER TABLE dealer_orders ADD COLUMN reviewed_at DATETIME NULL AFTER status"],
     ["reviewed_by", "ALTER TABLE dealer_orders ADD COLUMN reviewed_by VARCHAR(128) DEFAULT '' AFTER reviewed_at"],
     ["contract_no", "ALTER TABLE dealer_orders ADD COLUMN contract_no VARCHAR(128) DEFAULT '' AFTER reviewed_by"],
@@ -525,7 +533,11 @@ async function createDealerOrder(payload) {
   const dealer = payload.dealer || {};
   const dealerId = requireText(dealer.id || payload.dealerId, "经销商ID");
   const dealerName = requireText(dealer.name || payload.dealerName, "经销商名称");
-  const regionalManagerName = requireText(dealer.regionalManagerName || payload.regionalManagerName, "所属大区经理");
+  const dealerRole = normalize(dealer.role || payload.dealerRole);
+  const regionalManagerName = requireText(
+    dealer.regionalManagerName || payload.regionalManagerName || (dealerRole === "regional_manager" ? dealerName : ""),
+    "所属大区经理"
+  );
   const rawItems = Array.isArray(payload.items) && payload.items.length ? payload.items : [payload];
   const merged = new Map();
 
@@ -582,8 +594,8 @@ async function createDealerOrder(payload) {
       await connection.query(
         `INSERT INTO dealer_orders
          (order_no, line_no, dealer_id, dealer_name, dealer_phone, regional_manager_name, customer_name, contact_name, contact_phone,
-          model, batch_no, eta, inventory_type, quantity, approved_qty, allocated_qty, delivery_date, remark, status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, 'pending')`,
+          model, batch_no, eta, inventory_type, quantity, approved_qty, allocated_qty, delivery_date, remark, status, regional_review_status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, 'regional_pending', 'pending')`,
         [
           order.orderNo,
           index + 1,
@@ -614,17 +626,27 @@ async function createDealerOrder(payload) {
 
   return {
     id: order.orderNo,
-    status: "pending",
+    status: "regional_pending",
     itemCount: items.length,
-    message: "订单已提交，等待工厂审核",
+    message: "订单已提交，等待大区经理初审",
   };
 }
-async function listDealerOrders(dealerId) {
+
+async function listDealerOrders(filters = {}) {
   const connection = await mysql.createConnection(dbConfig);
   try {
     await ensureDealerOrdersTable(connection);
-    const whereSql = dealerId ? "WHERE dealer_id = ?" : "";
-    const params = dealerId ? [dealerId] : [];
+    const where = [];
+    const params = [];
+    if (filters.dealerId) {
+      where.push("dealer_id = ?");
+      params.push(filters.dealerId);
+    }
+    if (filters.regionalManagerName) {
+      where.push("regional_manager_name = ?");
+      params.push(filters.regionalManagerName);
+    }
+    const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
     const [rows] = await connection.query(
       `SELECT
         order_no AS id,
@@ -644,6 +666,10 @@ async function listDealerOrders(dealerId) {
         delivery_date AS deliveryDate,
         remark,
         status,
+        regional_review_status AS regionalReviewStatus,
+        regional_review_note AS regionalReviewNote,
+        regional_reviewed_by AS regionalReviewedBy,
+        DATE_FORMAT(regional_reviewed_at, '%Y-%m-%d %H:%i:%s') AS regionalReviewedAt,
         DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') AS createdAt
        FROM dealer_orders
        ${whereSql}
@@ -680,6 +706,55 @@ async function listDealerOrders(dealerId) {
   }
 }
 
+async function reviewDealerOrderByRegionalManager(orderNo, payload) {
+  const nextStatus = normalize(payload.status);
+  if (!["approved", "rejected"].includes(nextStatus)) {
+    const err = new Error("审核状态只能是 approved 或 rejected");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const regionalManagerName = normalize(payload.regionalManagerName);
+  const reviewerName = normalize(payload.reviewerName || payload.reviewedBy || regionalManagerName);
+  const note = normalize(payload.note || payload.regionalReviewNote || "");
+  const orderId = requireText(orderNo, "订单号");
+  const finalStatus = nextStatus === "approved" ? "pending" : "regional_rejected";
+
+  const connection = await mysql.createConnection(dbConfig);
+  try {
+    await ensureDealerOrdersTable(connection);
+    const where = ["order_no = ?", "status = 'regional_pending'"];
+    const params = [orderId];
+    if (regionalManagerName) {
+      where.push("regional_manager_name = ?");
+      params.push(regionalManagerName);
+    }
+    const [result] = await connection.query(
+      `UPDATE dealer_orders
+       SET status = ?,
+           regional_review_status = ?,
+           regional_review_note = ?,
+           regional_reviewed_by = ?,
+           regional_reviewed_at = NOW()
+       WHERE ${where.join(" AND ")}`,
+      [finalStatus, nextStatus, note, reviewerName].concat(params)
+    );
+    if (!result.affectedRows) {
+      const err = new Error("订单不存在、已审核，或不属于当前大区经理");
+      err.statusCode = 404;
+      throw err;
+    }
+    return {
+      id: orderId,
+      status: finalStatus,
+      regionalReviewStatus: nextStatus,
+      message: nextStatus === "approved" ? "初审通过，已进入工厂审核" : "订单已驳回"
+    };
+  } finally {
+    await connection.end();
+  }
+}
+
 function reservationKey(row) {
   if (row.heightened || row.inventoryType === "heightened") {
     return [
@@ -706,7 +781,7 @@ async function getActiveOrderHoldMap() {
         inventory_type AS inventoryType,
         SUM(GREATEST(quantity - allocated_qty, 0)) AS qty
        FROM dealer_orders
-       WHERE status IN ('pending', 'approved')
+       WHERE status IN ('regional_pending', 'pending', 'approved')
          AND quantity > allocated_qty
        GROUP BY model, batch_no, inventory_type`
     );
@@ -919,8 +994,17 @@ const server = http.createServer(async (req, res) => {
       sendJson(res, 200, await createDealerOrder(payload));
       return;
     }
+    const regionalOrderReviewMatch = url.pathname.match(/^\/api\/dealer\/orders\/([^/]+)\/regional-review$/);
+    if (regionalOrderReviewMatch && req.method === "POST") {
+      const payload = await readJsonBody(req);
+      sendJson(res, 200, await reviewDealerOrderByRegionalManager(decodeURIComponent(regionalOrderReviewMatch[1]), payload));
+      return;
+    }
     if (url.pathname === "/api/dealer/orders" && req.method === "GET") {
-      sendJson(res, 200, await listDealerOrders(url.searchParams.get("dealerId")));
+      sendJson(res, 200, await listDealerOrders({
+        dealerId: url.searchParams.get("dealerId"),
+        regionalManagerName: url.searchParams.get("regionalManagerName")
+      }));
       return;
     }
     if (url.pathname === "/api/dealer/health") {

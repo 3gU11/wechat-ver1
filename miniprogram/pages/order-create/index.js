@@ -6,6 +6,14 @@ function cartKey(item) {
   return [item.inventoryType || "", item.batchNo || "", item.model || ""].join("|");
 }
 
+function accountRegionalManagerName(account) {
+  if (!account) return "";
+  if (account.role === "regional_manager") {
+    return account.name || account.contactName || "";
+  }
+  return account.regionalManagerName || "";
+}
+
 Page({
   data: {
     cart: [],
@@ -32,7 +40,7 @@ Page({
         this.addInitialItem(options);
       }
       this.setData({
-        regionalManagerName: account.regionalManagerName || ""
+        regionalManagerName: accountRegionalManagerName(account)
       });
       this.loadCart();
     });

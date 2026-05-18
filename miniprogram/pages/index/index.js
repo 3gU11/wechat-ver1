@@ -82,29 +82,25 @@
   },
 
   loadModels() {
+    const api = require("../../utils/api");
     const fallbackModels = [
       { model: "DK7735", available: 15, finished: 6, wip: 9 },
       { model: "DK7745", available: 19, finished: 8, wip: 11 },
       { model: "DK7755", available: 11, finished: 4, wip: 7 }
     ];
-    const app = getApp();
-    const baseUrl = app.globalData.apiBaseUrl;
 
     this.setData({ loading: true });
-    wx.request({
-      url: baseUrl + "/inventory/available-models",
-      method: "GET",
-      success: res => {
+    api.getDealerInventory()
+      .then(res => {
         this.setData({ loading: false, models: Array.isArray(res.data) ? res.data : fallbackModels });
-      },
-      fail: () => {
+      })
+      .catch(() => {
         this.setData({
           loading: false,
           models: fallbackModels,
-          statusText: "未连接本地数据库接口，当前显示演示数据"
+          statusText: "未连接云托管接口，当前显示演示数据"
         });
-      }
-    });
+      });
   },
 
   goMachines() {

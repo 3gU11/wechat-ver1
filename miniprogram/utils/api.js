@@ -19,9 +19,42 @@ function request(options) {
   const app = getAppSafe();
   const baseUrl = app.globalData.apiBaseUrl || "";
   const token = app.globalData.token || "";
+  const cloudEnv = app.globalData.cloudEnv || "";
+  const cloudService = app.globalData.cloudService || "";
+  const apiPathPrefix = app.globalData.apiPathPrefix || "/api/dealer";
 
-  if (!baseUrl || baseUrl.indexOf("example.com") !== -1) {
+  if (!cloudEnv && (!baseUrl || baseUrl.indexOf("example.com") !== -1)) {
     return Promise.reject(new Error("MOCK_MODE"));
+  }
+
+  if (cloudEnv && cloudService && wx.cloud && wx.cloud.callContainer) {
+    return new Promise((resolve, reject) => {
+      const method = options.method || "GET";
+      const query = method !== "GET" ? "" : buildQuery(options.data || {});
+      wx.cloud.callContainer({
+        config: {
+          env: cloudEnv
+        },
+        path: apiPathPrefix + options.url + query,
+        method,
+        data: method === "GET" ? {} : (options.data || {}),
+        header: {
+          "X-WX-SERVICE": cloudService,
+          "content-type": "application/json",
+          "Authorization": token ? "Bearer " + token : ""
+        },
+        success(res) {
+          if (res.statusCode && (res.statusCode < 200 || res.statusCode >= 300)) {
+            reject(new Error(res.data && res.data.message ? res.data.message : "请求失败"));
+            return;
+          }
+          resolve(res.data);
+        },
+        fail(err) {
+          reject(err);
+        }
+      });
+    });
   }
 
   return new Promise((resolve, reject) => {
@@ -87,6 +120,14 @@ function requireLogin() {
 function isAdmin() {
   const account = getCurrentAccount();
   return !!account && account.role === "admin";
+}
+
+function getAccountRegionalManagerName(account) {
+  if (!account) return "";
+  if (account.role === "regional_manager") {
+    return account.name || account.contactName || "";
+  }
+  return account.regionalManagerName || "";
 }
 
 function login(payload) {
@@ -287,33 +328,55 @@ function getBatches() {
 function createOrder(payload) {
   const app = getAppSafe();
   const account = app.globalData.account || {};
+  const regionalManagerName = getAccountRegionalManagerName(account) || payload.regionalManagerName || "";
   return withMock(request({
     url: "/orders",
     method: "POST",
     data: Object.assign({}, payload, {
-      regionalManagerName: account.regionalManagerName || payload.regionalManagerName || "",
+      regionalManagerName,
       dealer: {
         id: account.id || "",
         name: account.name || "",
         phone: account.phone || "",
-        regionalManagerName: account.regionalManagerName || payload.regionalManagerName || ""
+        role: account.role || "",
+        regionalManagerName
       }
     })
   }), {
     id: "O" + Date.now(),
-    status: "pending",
-    message: "订单已提交，等待工厂审核并绑定机台"
+    status: "regional_pending",
+    message: "订单已提交，等待大区经理初审"
   });
 }
 
 function getOrders() {
   const app = getAppSafe();
   const account = app.globalData.account || {};
-  const query = account.role === "admin" ? {} : { dealerId: account.id || "" };
+  const query = {};
+  if (account.role === "regional_manager") {
+    query.regionalManagerName = account.name || account.contactName || "";
+  } else if (account.role !== "admin") {
+    query.dealerId = account.id || "";
+  }
   return withMock(request({
     url: "/orders",
     data: query
   }), mock.orders);
+}
+
+function reviewDealerOrder(orderId, status, note) {
+  const app = getAppSafe();
+  const account = app.globalData.account || {};
+  return request({
+    url: "/orders/" + encodeURIComponent(orderId) + "/regional-review",
+    method: "POST",
+    data: {
+      status,
+      note: note || "",
+      regionalManagerName: account.name || account.contactName || "",
+      reviewerName: account.name || account.contactName || account.phone || ""
+    }
+  });
 }
 
 module.exports = {
@@ -331,5 +394,6 @@ module.exports = {
   getAvailableMachines,
   getBatches,
   createOrder,
-  getOrders
+  getOrders,
+  reviewDealerOrder
 };
