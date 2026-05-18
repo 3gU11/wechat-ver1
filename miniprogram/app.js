@@ -1,7 +1,7 @@
 ﻿// app.js
 App({
   globalData: {
-    apiBaseUrl: "http://127.0.0.1:8001/api/dealer",
+    apiBaseUrl: "https://api.wechat-ver1.com/api/dealer",
     token: "",
     account: null,
     sessionLoaded: false

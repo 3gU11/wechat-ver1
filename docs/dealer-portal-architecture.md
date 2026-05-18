@@ -50,7 +50,7 @@
 
 ```json
 {
-  "phone": "13800000000",
+    "phone": "your-phone",
   "password": "123456"
 }
 ```
@@ -64,7 +64,7 @@
     "id": "dealer-1",
     "role": "dealer",
     "name": "苏州锐捷机床销售有限公司",
-    "phone": "13800000000",
+    "phone": "your-phone",
     "status": "approved"
   }
 }
@@ -77,7 +77,7 @@
 ```json
 {
   "companyName": "苏州锐捷机床销售有限公司",
-  "phone": "13800000000",
+  "phone": "your-phone",
   "contactName": "王经理",
   "region": "江苏苏州",
   "remark": "已有合作客户资源"
@@ -132,7 +132,7 @@ admin 查询经销商注册申请列表。
   {
     "id": "dealer-1",
     "companyName": "苏州锐捷机床销售有限公司",
-    "phone": "13800000000",
+    "phone": "your-phone",
     "contactName": "王经理",
     "status": "pending",
     "createdAt": "2026-05-16 10:30"
@@ -228,7 +228,7 @@ admin 审核经销商注册申请。
   "machineId": "M001",
   "customerName": "苏州某精密制造",
   "contactName": "张三",
-  "contactPhone": "13800000000",
+  "contactPhone": "customer-phone",
   "model": "DK7745",
   "batchNo": "B2026051601",
   "eta": "2026-05-22",

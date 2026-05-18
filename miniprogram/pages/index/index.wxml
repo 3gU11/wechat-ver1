@@ -1,7 +1,7 @@
 ﻿<view class="page">
   <view wx:if="{{!isLoggedIn}}" class="login-panel">
     <view class="login-title">经销商登录</view>
-    <view class="login-desc">普通经销商审核通过后才能登录。演示账号可直接使用。</view>
+    <view class="login-desc">普通经销商和大区经理审核通过后才能登录。</view>
 
     <view class="card form-card">
       <view class="field">
@@ -10,17 +10,16 @@
       </view>
       <view class="field">
         <view class="label">验证码 / 密码</view>
-        <input placeholder="经销商 123456，admin admin123" password value="{{password}}" bindinput="onPasswordInput" />
+        <input placeholder="经销商验证码 123456，admin 密码 admin123" password value="{{password}}" bindinput="onPasswordInput" />
       </view>
     </view>
 
-    <button class="primary-btn login-btn" loading="{{submitting}}" bindtap="login">登录</button>
+    <button class="primary-btn login-btn" loading="{{submitting}}" bindtap="login" style="position: relative; left: 0rpx; top: -2rpx; height: 108rpx; display: block; box-sizing: border-box">登录</button>
     <view wx:if="{{statusText}}" class="status-text">{{statusText}}</view>
-    <button class="secondary-btn login-btn" bindtap="goRegister">申请成为经销商</button>
+    <button class="secondary-btn login-btn" bindtap="goRegister" style="position: relative; left: 0rpx; top: 2rpx; height: 87rpx; display: block; box-sizing: border-box">申请成为经销商</button>
 
     <view class="demo muted">
-      <view>演示经销商：13800000000 / 123456</view>
-      <view>演示管理员：admin / admin123</view>
+      <view>管理员：admin / admin123</view>
     </view>
   </view>
 
@@ -42,8 +41,8 @@
       </view>
     </view>
 
-    <view class="section-title">公开库存</view>
-    <view class="card table-card">
+    <view wx:if="{{isRegionalManager}}" class="section-title">公开库存</view>
+    <view wx:if="{{isRegionalManager}}" class="card table-card">
       <view class="table-row table-head">
         <text>机型</text>
         <text>成品</text>
@@ -54,6 +53,9 @@
         <text>{{item.finished}}</text>
         <text>{{item.wip}}</text>
       </view>
+    </view>
+    <view wx:else class="card table-card">
+      <view class="muted">公开库存表仅大区经理可见。普通经销商可进入预计入库页面选择机型并提交订单。</view>
     </view>
 
     <button class="primary-btn action-btn" bindtap="goMachines">查看预计入库并加入购物车</button>

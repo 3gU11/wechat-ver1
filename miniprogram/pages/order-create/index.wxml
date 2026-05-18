@@ -25,6 +25,10 @@
 
   <view class="card form-card">
     <view class="field">
+      <view class="label">所属大区经理</view>
+      <input value="{{regionalManagerName || '未绑定'}}" disabled />
+    </view>
+    <view class="field">
       <view class="label">客户名称</view>
       <input placeholder="终端客户或项目名称" data-field="customerName" bindinput="onInput" />
     </view>
@@ -40,11 +44,11 @@
       <view class="label">期望交期</view>
       <input placeholder="例如 2026-05-30" data-field="deliveryDate" bindinput="onInput" />
     </view>
-    <view class="field">
+    <view class="field" style="height: 324rpx; display: block; box-sizing: border-box">
       <view class="label">备注</view>
       <textarea placeholder="配置要求、付款信息、运输要求等" data-field="remark" bindinput="onInput"></textarea>
     </view>
   </view>
 
-  <button class="primary-btn submit-btn" loading="{{submitting}}" bindtap="submit">提交订单</button>
+  <button class="primary-btn submit-btn" loading="{{submitting}}" bindtap="submit" style="position: relative; left: -1rpx; top: -27rpx; height: 81rpx; display: block; box-sizing: border-box; width: 481rpx">提交订单</button>
 </view>

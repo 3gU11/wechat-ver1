@@ -33,10 +33,24 @@ loadEnvFile();
 const PORT = Number(process.env.PORT || 8001);
 const TABLE_NAME = process.env.FINISHED_GOODS_TABLE || "finished_goods_data";
 
+function parseMysqlAddress(address) {
+  const text = normalize(address);
+  if (!text) {
+    return {};
+  }
+  const [host, port] = text.split(":");
+  return {
+    host: host || "",
+    port: port ? Number(port) : undefined
+  };
+}
+
+const mysqlAddress = parseMysqlAddress(process.env.MYSQL_ADDRESS);
+
 const dbConfig = {
-  host: process.env.MYSQL_HOST || "127.0.0.1",
-  port: Number(process.env.MYSQL_PORT || 3306),
-  user: process.env.MYSQL_USER || "root",
+  host: process.env.MYSQL_HOST || mysqlAddress.host || "127.0.0.1",
+  port: Number(process.env.MYSQL_PORT || mysqlAddress.port || 3306),
+  user: process.env.MYSQL_USER || process.env.MYSQL_USERNAME || "root",
   password: process.env.MYSQL_PASSWORD || "",
   database: process.env.MYSQL_DATABASE || "rjfinshed",
   charset: "utf8mb4"
@@ -106,6 +120,11 @@ function inventoryType(row, statusCol, eta) {
   return eta && eta !== "现货" ? "wip" : "finished";
 }
 
+function isStockBatch(batchNo) {
+  const text = normalize(batchNo).toLowerCase();
+  return ["库存中", "finished-stock", "stock", "in_stock", "finished"].includes(text);
+}
+
 function quantityValue(row, quantityCol) {
   if (!quantityCol) {
     return 1;
@@ -165,6 +184,7 @@ async function ensureDealerOrdersTable(connection) {
       dealer_id VARCHAR(128) NOT NULL,
       dealer_name VARCHAR(255) NOT NULL,
       dealer_phone VARCHAR(64) DEFAULT '',
+      regional_manager_name VARCHAR(128) DEFAULT '',
       customer_name VARCHAR(255) NOT NULL,
       contact_name VARCHAR(128) NOT NULL,
       contact_phone VARCHAR(64) NOT NULL,
@@ -198,6 +218,7 @@ async function ensureDealerOrdersTable(connection) {
   const columnNames = new Set(columns.map(column => column.Field));
   const additions = [
     ["line_no", "ALTER TABLE dealer_orders ADD COLUMN line_no INT NOT NULL DEFAULT 1 AFTER order_no"],
+    ["regional_manager_name", "ALTER TABLE dealer_orders ADD COLUMN regional_manager_name VARCHAR(128) DEFAULT '' AFTER dealer_phone"],
     ["approved_qty", "ALTER TABLE dealer_orders ADD COLUMN approved_qty INT NOT NULL DEFAULT 0 AFTER quantity"],
     ["allocated_qty", "ALTER TABLE dealer_orders ADD COLUMN allocated_qty INT NOT NULL DEFAULT 0 AFTER approved_qty"],
     ["reviewed_at", "ALTER TABLE dealer_orders ADD COLUMN reviewed_at DATETIME NULL AFTER status"],
@@ -237,6 +258,8 @@ async function ensureDealerApplicationsTable(connection) {
       phone VARCHAR(64) NOT NULL UNIQUE,
       contact_name VARCHAR(128) NOT NULL,
       region VARCHAR(255) DEFAULT '',
+      role VARCHAR(32) NOT NULL DEFAULT 'dealer',
+      regional_manager_name VARCHAR(128) DEFAULT '',
       remark TEXT,
       status VARCHAR(32) NOT NULL DEFAULT 'pending',
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -246,13 +269,18 @@ async function ensureDealerApplicationsTable(connection) {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
   `);
 
-  await connection.query(
-    `INSERT IGNORE INTO dealer_applications
-      (dealer_code, company_name, phone, contact_name, region, remark, status)
-     VALUES
-      ('dealer-approved-demo', '苏州锐捷机床销售有限公司', '13800000000', '王经理', '江苏', '演示账号', 'approved'),
-      ('dealer-pending-demo', '宁波线切割设备服务部', '13900000000', '李经理', '浙江', '演示待审核账号', 'pending')`
-  );
+  const [columns] = await connection.query("SHOW COLUMNS FROM dealer_applications");
+  const columnNames = new Set(columns.map(column => column.Field));
+  const additions = [
+    ["role", "ALTER TABLE dealer_applications ADD COLUMN role VARCHAR(32) NOT NULL DEFAULT 'dealer' AFTER region"],
+    ["regional_manager_name", "ALTER TABLE dealer_applications ADD COLUMN regional_manager_name VARCHAR(128) DEFAULT '' AFTER role"]
+  ];
+  for (const [columnName, sql] of additions) {
+    if (!columnNames.has(columnName)) {
+      await connection.query(sql);
+    }
+  }
+
 }
 
 async function readJsonBody(req) {
@@ -307,6 +335,13 @@ async function createDealerApplication(payload) {
   const phone = requireText(payload.phone, "手机号");
   const contactName = requireText(payload.contactName, "姓名");
   const region = requireText(payload.region, "所在地区");
+  const role = normalize(payload.role) === "regional_manager" ? "regional_manager" : "dealer";
+  const regionalManagerName = normalize(payload.regionalManagerName);
+  if (role === "dealer" && !regionalManagerName) {
+    const err = new Error("请选择所属大区经理");
+    err.statusCode = 400;
+    throw err;
+  }
   const remark = normalize(payload.remark);
   const dealerCode = `dealer-${Date.now()}`;
 
@@ -325,9 +360,9 @@ async function createDealerApplication(payload) {
 
     await connection.query(
       `INSERT INTO dealer_applications
-        (dealer_code, company_name, phone, contact_name, region, remark, status)
-       VALUES (?, ?, ?, ?, ?, ?, 'pending')`,
-      [dealerCode, companyName, phone, contactName, region, remark]
+        (dealer_code, company_name, phone, contact_name, region, role, regional_manager_name, remark, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+      [dealerCode, companyName, phone, contactName, region, role, regionalManagerName, remark]
     );
   } finally {
     await connection.end();
@@ -357,7 +392,7 @@ async function loginDealer(payload) {
   }
 
   if (password !== "123456") {
-    const err = new Error("验证码错误，演示验证码为 123456");
+    const err = new Error("验证码错误");
     err.statusCode = 401;
     throw err;
   }
@@ -372,6 +407,8 @@ async function loginDealer(payload) {
         phone,
         contact_name AS contactName,
         region,
+        role,
+        regional_manager_name AS regionalManagerName,
         status
        FROM dealer_applications
        WHERE phone = ?
@@ -396,11 +433,12 @@ async function loginDealer(payload) {
       token: `dealer-token-${dealer.id}`,
       account: {
         id: dealer.id,
-        role: "dealer",
+        role: dealer.role || "dealer",
         name: dealer.name,
         phone: dealer.phone,
         contactName: dealer.contactName,
         region: dealer.region,
+        regionalManagerName: dealer.regionalManagerName,
         status: dealer.status,
       },
     };
@@ -420,11 +458,34 @@ async function listDealerApplications() {
         phone,
         contact_name AS contactName,
         region,
+        role,
+        regional_manager_name AS regionalManagerName,
         remark,
         status,
         DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') AS createdAt
        FROM dealer_applications
        ORDER BY FIELD(status, 'pending', 'approved', 'rejected'), created_at DESC`
+    );
+    return rows;
+  } finally {
+    await connection.end();
+  }
+}
+
+async function listRegionalManagers() {
+  const connection = await mysql.createConnection(dbConfig);
+  try {
+    await ensureDealerApplicationsTable(connection);
+    const [rows] = await connection.query(
+      `SELECT
+        dealer_code AS id,
+        company_name AS name,
+        contact_name AS contactName,
+        phone,
+        region
+       FROM dealer_applications
+       WHERE role = 'regional_manager' AND status = 'approved'
+       ORDER BY company_name ASC, contact_name ASC`
     );
     return rows;
   } finally {
@@ -464,6 +525,7 @@ async function createDealerOrder(payload) {
   const dealer = payload.dealer || {};
   const dealerId = requireText(dealer.id || payload.dealerId, "经销商ID");
   const dealerName = requireText(dealer.name || payload.dealerName, "经销商名称");
+  const regionalManagerName = requireText(dealer.regionalManagerName || payload.regionalManagerName, "所属大区经理");
   const rawItems = Array.isArray(payload.items) && payload.items.length ? payload.items : [payload];
   const merged = new Map();
 
@@ -503,6 +565,7 @@ async function createDealerOrder(payload) {
     dealerId,
     dealerName,
     dealerPhone: normalize(dealer.phone || payload.dealerPhone),
+    regionalManagerName,
     customerName: requireText(payload.customerName, "客户名称"),
     contactName: requireText(payload.contactName, "联系人"),
     contactPhone: requireText(payload.contactPhone, "联系电话"),
@@ -518,15 +581,16 @@ async function createDealerOrder(payload) {
       const item = items[index];
       await connection.query(
         `INSERT INTO dealer_orders
-         (order_no, line_no, dealer_id, dealer_name, dealer_phone, customer_name, contact_name, contact_phone,
+         (order_no, line_no, dealer_id, dealer_name, dealer_phone, regional_manager_name, customer_name, contact_name, contact_phone,
           model, batch_no, eta, inventory_type, quantity, approved_qty, allocated_qty, delivery_date, remark, status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, 'pending')`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, 'pending')`,
         [
           order.orderNo,
           index + 1,
           order.dealerId,
           order.dealerName,
           order.dealerPhone,
+          order.regionalManagerName,
           order.customerName,
           order.contactName,
           order.contactPhone,
@@ -567,6 +631,7 @@ async function listDealerOrders(dealerId) {
         line_no AS lineNo,
         dealer_id AS dealerId,
         dealer_name AS dealerName,
+        regional_manager_name AS regionalManagerName,
         customer_name AS customerName,
         contact_name AS contactName,
         contact_phone AS contactPhone,
@@ -686,7 +751,7 @@ async function mapRows() {
       const eta = etaCol && columns.includes(etaCol) ? normalize(row[etaCol]) : "";
       const originalBatchNo = originalBatchCol ? normalize(row[originalBatchCol]) : "";
       const originalEta = originalEtaCol ? normalize(row[originalEtaCol]) : "";
-      const isStock = batchNo === "库存中";
+      const isStock = isStockBatch(batchNo);
       return {
         model,
         available: quantityValue(row, quantityCol),
@@ -762,7 +827,7 @@ async function inboundPlans() {
         model: row.model,
         available: 0,
         batchNo: row.heightened ? (row.originalBatchNo || row.batchNo) : row.batchNo,
-        eta: row.heightened ? (row.originalEta || (String(row.originalBatchNo || "").indexOf("库存中") === 0 ? "现货" : row.eta)) : row.eta,
+        eta: row.heightened ? (row.originalEta || (isStockBatch(row.originalBatchNo) ? "现货" : row.eta)) : row.eta,
         heightened: row.heightened
       });
     }
@@ -837,6 +902,10 @@ const server = http.createServer(async (req, res) => {
     }
     if (url.pathname === "/api/dealer/admin/dealers/applications" && req.method === "GET") {
       sendJson(res, 200, await listDealerApplications());
+      return;
+    }
+    if (url.pathname === "/api/dealer/regional-managers" && req.method === "GET") {
+      sendJson(res, 200, await listRegionalManagers());
       return;
     }
     const reviewMatch = url.pathname.match(/^\/api\/dealer\/admin\/dealers\/([^/]+)\/review$/);

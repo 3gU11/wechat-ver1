@@ -1,8 +1,8 @@
 <view class="page">
   <view class="head-row">
     <view>
-      <view class="section-title">经销商注册审核</view>
-      <view class="desc">只有审核通过的手机号才能登录普通经销商账号。</view>
+      <view class="section-title">账号注册审核</view>
+      <view class="desc">审核普通经销商和大区经理账号，只有通过后才能登录。</view>
     </view>
     <button class="logout-btn" bindtap="logout">退出</button>
   </view>
@@ -13,6 +13,8 @@
         <view>
           <view class="company">{{item.companyName}}</view>
           <view class="meta">{{item.contactName}} · {{item.phone}}</view>
+          <view class="meta">账号类型：{{item.role === 'regional_manager' ? '大区经理' : '普通经销商'}}</view>
+          <view wx:if="{{item.regionalManagerName}}" class="meta">所属大区经理：{{item.regionalManagerName}}</view>
           <view class="meta">所在地区：{{item.region || '-'}}</view>
         </view>
         <view class="tag {{item.status === 'pending' ? 'warn' : item.status === 'rejected' ? 'gray' : ''}}">

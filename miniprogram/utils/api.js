@@ -9,6 +9,12 @@ function getAppSafe() {
   return { globalData: {} };
 }
 
+function buildQuery(data) {
+  const keys = Object.keys(data || {}).filter(key => data[key] !== undefined && data[key] !== null && data[key] !== "");
+  if (!keys.length) return "";
+  return "?" + keys.map(key => encodeURIComponent(key) + "=" + encodeURIComponent(data[key])).join("&");
+}
+
 function request(options) {
   const app = getAppSafe();
   const baseUrl = app.globalData.apiBaseUrl || "";
@@ -42,14 +48,6 @@ function request(options) {
   });
 }
 
-function buildQuery(data) {
-  const keys = Object.keys(data || {}).filter(key => data[key] !== undefined && data[key] !== null && data[key] !== "");
-  if (!keys.length) {
-    return "";
-  }
-  return "?" + keys.map(key => encodeURIComponent(key) + "=" + encodeURIComponent(data[key])).join("&");
-}
-
 function isMockMode() {
   const app = getAppSafe();
   const baseUrl = app.globalData.apiBaseUrl || "";
@@ -57,34 +55,13 @@ function isMockMode() {
 }
 
 function getMockDealers() {
-  const initial = [
-    {
-      id: "dealer-approved-demo",
-      companyName: "苏州锐捷机床销售有限公司",
-      phone: "13800000000",
-      contactName: "王经理",
-      region: "江苏",
-      status: "approved",
-      createdAt: "2026-05-16 09:00"
-    },
-    {
-      id: "dealer-pending-demo",
-      companyName: "宁波线切割设备服务部",
-      phone: "13900000000",
-      contactName: "李经理",
-      region: "浙江",
-      status: "pending",
-      createdAt: "2026-05-16 10:30"
-    }
-  ];
+  const initial = [];
 
   if (mockDealerApplications && mockDealerApplications.length) {
     const rows = mockDealerApplications.slice();
     initial.forEach(seed => {
       const exists = rows.find(item => item.phone === seed.phone);
-      if (!exists) {
-        rows.push(seed);
-      }
+      if (!exists) rows.push(seed);
     });
     mockDealerApplications = rows;
     return rows;
@@ -141,7 +118,7 @@ function login(payload) {
       return Promise.reject(new Error("账号还未审核通过，暂不能登录"));
     }
     if (password !== "123456") {
-      return Promise.reject(new Error("验证码错误，演示验证码为 123456"));
+      return Promise.reject(new Error("验证码错误"));
     }
 
     return {
@@ -149,11 +126,12 @@ function login(payload) {
         token: "mock-dealer-token-" + dealer.id,
         account: {
           id: dealer.id,
-          role: "dealer",
+          role: dealer.role || "dealer",
           name: dealer.companyName,
           phone: dealer.phone,
           contactName: dealer.contactName,
           region: dealer.region,
+          regionalManagerName: dealer.regionalManagerName || "",
           status: dealer.status
         }
       },
@@ -192,6 +170,19 @@ function registerDealer(payload) {
     return { data, mock: false };
   }).catch(err => {
     if (err.message === "MOCK_MODE") {
+      const rows = getMockDealers();
+      rows.unshift({
+        id: "dealer-" + Date.now(),
+        companyName: payload.companyName,
+        phone: payload.phone,
+        contactName: payload.contactName,
+        region: payload.region,
+        role: payload.role || "dealer",
+        regionalManagerName: payload.regionalManagerName || "",
+        status: "pending",
+        createdAt: new Date().toISOString().slice(0, 19).replace("T", " ")
+      });
+      saveMockDealers(rows);
       return {
         data: {
           status: "pending",
@@ -204,8 +195,29 @@ function registerDealer(payload) {
   });
 }
 
+function withMock(apiPromise, fallback) {
+  return apiPromise.then(data => {
+    return { data, mock: false };
+  }).catch(() => {
+    return Promise.resolve({ data: fallback, mock: true });
+  });
+}
+
 function getDealerApplications() {
   return withMock(request({ url: "/admin/dealers/applications" }), getMockDealers());
+}
+
+function getRegionalManagers() {
+  const managers = getMockDealers()
+    .filter(item => item.role === "regional_manager" && item.status === "approved")
+    .map(item => ({
+      id: item.id,
+      name: item.companyName,
+      contactName: item.contactName,
+      phone: item.phone,
+      region: item.region
+    }));
+  return withMock(request({ url: "/regional-managers" }), managers);
 }
 
 function reviewDealerApplication(id, status) {
@@ -215,30 +227,11 @@ function reviewDealerApplication(id, status) {
     data: { status }
   }).catch(() => {
     const rows = getMockDealers().map(item => {
-      if (item.id === id) {
-        return Object.assign({}, item, { status });
-      }
+      if (item.id === id) return Object.assign({}, item, { status });
       return item;
     });
     saveMockDealers(rows);
-    return {
-      data: { success: true },
-      mock: true
-    };
-  });
-}
-
-function withMock(apiPromise, fallback) {
-  return apiPromise.then(data => {
-    return {
-      data,
-      mock: false
-    };
-  }).catch(() => {
-    return Promise.resolve({
-      data: fallback,
-      mock: true
-    });
+    return { data: { success: true }, mock: true };
   });
 }
 
@@ -298,10 +291,12 @@ function createOrder(payload) {
     url: "/orders",
     method: "POST",
     data: Object.assign({}, payload, {
+      regionalManagerName: account.regionalManagerName || payload.regionalManagerName || "",
       dealer: {
         id: account.id || "",
         name: account.name || "",
-        phone: account.phone || ""
+        phone: account.phone || "",
+        regionalManagerName: account.regionalManagerName || payload.regionalManagerName || ""
       }
     })
   }), {
@@ -324,6 +319,7 @@ function getOrders() {
 module.exports = {
   login,
   registerDealer,
+  getRegionalManagers,
   getDealerApplications,
   reviewDealerApplication,
   requireLogin,

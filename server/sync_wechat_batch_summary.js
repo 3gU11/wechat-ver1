@@ -41,10 +41,19 @@ function idFor(row) {
 
 loadEnvFile();
 
+function parseMysqlAddress(address) {
+  const text = String(address || "").trim();
+  if (!text) return {};
+  const [host, port] = text.split(":");
+  return { host: host || "", port: port ? Number(port) : undefined };
+}
+
+const mysqlAddress = parseMysqlAddress(process.env.MYSQL_ADDRESS);
+
 const dbConfig = {
-  host: process.env.MYSQL_HOST || "127.0.0.1",
-  port: Number(process.env.MYSQL_PORT || 3306),
-  user: process.env.MYSQL_USER || "root",
+  host: process.env.MYSQL_HOST || mysqlAddress.host || "127.0.0.1",
+  port: Number(process.env.MYSQL_PORT || mysqlAddress.port || 3306),
+  user: process.env.MYSQL_USER || process.env.MYSQL_USERNAME || "root",
   password: process.env.MYSQL_PASSWORD || "",
   database: process.env.MYSQL_DATABASE || "rjfinshed",
   charset: "utf8mb4"

@@ -1,11 +1,17 @@
 <view class="page">
-  <view class="section-title">申请经销商账号</view>
-  <view class="hint">提交后账号状态为待审核，管理员审核通过后才能用手机号登录。</view>
+  <view class="section-title">申请账号</view>
+  <view class="hint">普通经销商需要选择所属大区经理，审核通过后才能登录。</view>
 
   <view class="card form-card">
     <view class="field">
-      <view class="label">经销商公司</view>
-      <input placeholder="请输入公司名称" data-field="companyName" bindinput="onInput" />
+      <view class="label">账号类型</view>
+      <picker mode="selector" range="{{roles}}" range-key="label" value="{{roleIndex}}" bindchange="onRoleChange">
+        <view class="picker-value">{{roles[roleIndex].label}}</view>
+      </picker>
+    </view>
+    <view class="field">
+      <view class="label">公司 / 名称</view>
+      <input placeholder="请输入公司或大区经理名称" data-field="companyName" bindinput="onInput" />
     </view>
     <view class="field">
       <view class="label">姓名</view>
@@ -16,8 +22,14 @@
       <input placeholder="登录手机号" type="number" data-field="phone" bindinput="onInput" />
     </view>
     <view class="field">
-      <view class="label">所在地区</view>
+      <view class="label">{{form.role === 'regional_manager' ? '管辖大区' : '所在地区'}}</view>
       <input placeholder="例如 江苏苏州 / 浙江宁波 / 华东" data-field="region" bindinput="onInput" />
+    </view>
+    <view wx:if="{{form.role === 'dealer'}}" class="field">
+      <view class="label">所属大区经理</view>
+      <picker mode="selector" range="{{regionalManagerNames}}" value="{{regionalManagerIndex}}" bindchange="onRegionalManagerChange">
+        <view class="picker-value">{{form.regionalManagerName || '请选择所属大区经理'}}</view>
+      </picker>
     </view>
     <view class="field">
       <view class="label">备注</view>

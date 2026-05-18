@@ -12,6 +12,7 @@
       </view>
       <view class="customer">{{item.customerName}}</view>
       <view wx:if="{{item.dealerName}}" class="meta">经销商：{{item.dealerName}}</view>
+      <view wx:if="{{item.regionalManagerName}}" class="meta">所属大区经理：{{item.regionalManagerName}}</view>
       <view class="meta">合计 {{item.quantity}} 台 · {{item.itemCount || 1}} 行</view>
       <view wx:for="{{item.items}}" wx:for-item="line" wx:key="lineNo" class="line-item">
         <view>{{line.model}} · {{line.quantity}} 台</view>

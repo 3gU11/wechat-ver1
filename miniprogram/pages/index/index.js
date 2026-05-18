@@ -4,6 +4,7 @@
     account: null,
     isLoggedIn: false,
     isAdminAccount: false,
+    isRegionalManager: false,
     models: [],
     phone: "",
     password: "",
@@ -18,6 +19,7 @@
           account: null,
           isLoggedIn: false,
           isAdminAccount: false,
+          isRegionalManager: false,
           models: [],
           loading: false
         });
@@ -26,7 +28,8 @@
       this.setData({
         account,
         isLoggedIn: true,
-        isAdminAccount: account.role === "admin"
+        isAdminAccount: account.role === "admin",
+        isRegionalManager: account.role === "regional_manager"
       });
       this.loadModels();
     });
@@ -60,6 +63,7 @@
           account: res.data.account,
           isLoggedIn: true,
           isAdminAccount: res.data.account.role === "admin",
+          isRegionalManager: res.data.account.role === "regional_manager",
           statusText: "登录成功"
         });
         this.loadModels();

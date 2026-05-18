@@ -2,14 +2,42 @@ const api = require("../../../utils/api");
 
 Page({
   data: {
+    roles: [
+      { label: "普通经销商", value: "dealer" },
+      { label: "大区经理", value: "regional_manager" }
+    ],
+    roleIndex: 0,
+    regionalManagers: [],
+    regionalManagerNames: [],
+    regionalManagerIndex: -1,
     form: {
       companyName: "",
       phone: "",
       contactName: "",
       region: "",
+      role: "dealer",
+      regionalManagerName: "",
       remark: ""
     },
     submitting: false
+  },
+
+  onLoad() {
+    this.loadRegionalManagers();
+  },
+
+  loadRegionalManagers() {
+    api.getRegionalManagers()
+      .then(res => {
+        const rows = res.data || [];
+        this.setData({
+          regionalManagers: rows,
+          regionalManagerNames: rows.map(item => item.name)
+        });
+      })
+      .catch(() => {
+        this.setData({ regionalManagers: [], regionalManagerNames: [] });
+      });
   },
 
   onInput(e) {
@@ -19,10 +47,34 @@ Page({
     });
   },
 
+  onRoleChange(e) {
+    const roleIndex = Number(e.detail.value || 0);
+    const role = this.data.roles[roleIndex].value;
+    this.setData({
+      roleIndex,
+      "form.role": role,
+      regionalManagerIndex: role === "dealer" ? this.data.regionalManagerIndex : -1,
+      "form.regionalManagerName": role === "dealer" ? this.data.form.regionalManagerName : ""
+    });
+  },
+
+  onRegionalManagerChange(e) {
+    const regionalManagerIndex = Number(e.detail.value);
+    const manager = this.data.regionalManagers[regionalManagerIndex];
+    this.setData({
+      regionalManagerIndex,
+      "form.regionalManagerName": manager ? manager.name : ""
+    });
+  },
+
   submit() {
     const form = this.data.form;
     if (!form.companyName || !form.phone || !form.contactName || !form.region) {
       wx.showToast({ title: "请填写公司、姓名、手机号和地区", icon: "none" });
+      return;
+    }
+    if (form.role === "dealer" && !form.regionalManagerName) {
+      wx.showToast({ title: "请选择所属大区经理", icon: "none" });
       return;
     }
 

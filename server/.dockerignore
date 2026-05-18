@@ -1,0 +1,13 @@
+node_modules
+.env
+*.log
+*.err.log
+*.out.log
+clear_dealer_identity_data.js
+export_wechat_cloud_ascii_sql.js
+sync_wechat_batch_summary.js
+sync_wechat_batch_summary.cmd
+start_dealer_api.cmd
+start_dealer_api.ps1
+dealer_api.py
+requirements.txt

@@ -10,6 +10,7 @@ Page({
   data: {
     cart: [],
     totalQty: 0,
+    regionalManagerName: "",
     form: {
       customerName: "",
       contactName: "",
@@ -30,6 +31,9 @@ Page({
       if (options.model) {
         this.addInitialItem(options);
       }
+      this.setData({
+        regionalManagerName: account.regionalManagerName || ""
+      });
       this.loadCart();
     });
   },
@@ -110,6 +114,10 @@ Page({
       wx.showToast({ title: "请填写客户、联系人和电话", icon: "none" });
       return;
     }
+    if (!this.data.regionalManagerName) {
+      wx.showToast({ title: "当前账号未绑定所属大区经理", icon: "none" });
+      return;
+    }
     for (const item of cart) {
       if (Number(item.quantity || 0) > Number(item.available || 0)) {
         wx.showToast({ title: item.model + " 超过可用数量", icon: "none" });
@@ -119,6 +127,7 @@ Page({
 
     this.setData({ submitting: true });
     api.createOrder({
+      regionalManagerName: this.data.regionalManagerName,
       customerName: form.customerName,
       contactName: form.contactName,
       contactPhone: form.contactPhone,

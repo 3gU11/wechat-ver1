@@ -9,7 +9,7 @@
     </view>
     <view class="field">
       <view class="label">验证码 / 密码</view>
-      <input placeholder="演示验证码 123456，admin 密码 admin123" password value="{{password}}" bindinput="onPasswordInput" />
+      <input placeholder="经销商验证码 123456，admin 密码 admin123" password value="{{password}}" bindinput="onPasswordInput" />
     </view>
   </view>
 
@@ -18,7 +18,6 @@
   <button class="secondary-btn register-btn" bindtap="goRegister">申请成为经销商</button>
 
   <view class="demo muted">
-    <view>演示经销商：13800000000 / 123456</view>
-    <view>演示管理员：admin / admin123</view>
+    <view>管理员：admin / admin123</view>
   </view>
 </view>

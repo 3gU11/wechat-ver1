@@ -30,6 +30,13 @@ input {
   font-size: 28rpx;
 }
 
+.picker-value {
+  min-height: 72rpx;
+  line-height: 72rpx;
+  color: #101828;
+  font-size: 28rpx;
+}
+
 textarea {
   width: 100%;
   min-height: 150rpx;
