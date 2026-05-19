@@ -10,7 +10,8 @@ Page({
     cartCount: 0,
     quantityModalVisible: false,
     pendingModel: "",
-    selectedQuantity: 1
+    pendingAvailable: 0,
+    selectedQuantity: 0
   },
 
   onShow() {
@@ -67,6 +68,7 @@ Page({
     this.setData({
       quantityModalVisible: true,
       pendingModel: e.currentTarget.dataset.model,
+      pendingAvailable: Number(e.currentTarget.dataset.available || 0),
       selectedQuantity: 0
     });
   },
@@ -75,6 +77,7 @@ Page({
     this.setData({
       quantityModalVisible: false,
       pendingModel: "",
+      pendingAvailable: 0,
       selectedQuantity: 0
     });
   },
@@ -86,38 +89,56 @@ Page({
   },
 
   increaseQuantity() {
-    this.setData({ selectedQuantity: Number(this.data.selectedQuantity || 0) + 1 });
+    const next = Number(this.data.selectedQuantity || 0) + 1;
+    if (this.data.pendingAvailable && next > Number(this.data.pendingAvailable || 0)) {
+      wx.showToast({ title: "超出可订机台数量", icon: "none" });
+      return;
+    }
+    this.setData({ selectedQuantity: next });
   },
 
   onQuantityInput(e) {
     let value = parseInt(e.detail.value, 10);
     if (isNaN(value)) value = 0;
+    if (this.data.pendingAvailable && value > Number(this.data.pendingAvailable || 0)) {
+      wx.showToast({ title: "超出可订机台数量", icon: "none" });
+      value = Number(this.data.pendingAvailable || 0);
+    }
     this.setData({ selectedQuantity: Math.max(0, value) });
   },
 
   addPendingToCart() {
     const model = this.data.pendingModel;
     const quantity = Number(this.data.selectedQuantity || 0);
-    if (!model) return;
+    if (!model) return false;
     if (quantity <= 0) {
       wx.showToast({ title: "请填写数量", icon: "none" });
-      return;
+      return false;
     }
-    const cart = wx.getStorageSync(CART_KEY) || [];
+
+    const cart = this.getCart();
     const existing = cart.find(item => item.model === model);
+    const existingQty = Number(existing && existing.quantity || 0);
+    if (this.data.pendingAvailable && existingQty + quantity > Number(this.data.pendingAvailable || 0)) {
+      wx.showToast({ title: "超出可订机台数量", icon: "none" });
+      return false;
+    }
+
     if (existing) {
-      existing.quantity = Number(existing.quantity || 0) + quantity;
+      existing.quantity = existingQty + quantity;
     } else {
       cart.push({ model, quantity });
     }
     this.saveCart(cart);
     this.closeQuantityModal();
     wx.showToast({ title: "已加入购物车", icon: "success" });
+    return true;
   },
 
   submitPendingOrder() {
-    this.addPendingToCart();
-    wx.navigateTo({ url: "/pages/order-create/index" });
+    if (this.addPendingToCart()) {
+      wx.navigateTo({ url: "/pages/order-create/index" });
+    }
   },
 
   goCart() {

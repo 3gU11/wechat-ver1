@@ -16,7 +16,7 @@
           <view class="serial">提交需求后，由大区经理分配具体批次</view>
         </view>
       </view>
-      <button class="primary-btn bind-btn" data-model="{{item.model}}" bindtap="openQuantityModal">选择数量</button>
+      <button class="primary-btn bind-btn" data-model="{{item.model}}" data-available="{{item.available}}" bindtap="openQuantityModal">选择数量</button>
     </view>
   </view>
 
@@ -35,7 +35,13 @@
 
       <view class="quantity-stepper">
         <button class="quantity-step" bindtap="decreaseQuantity">-</button>
-        <input class="quantity-input" type="number" value="{{selectedQuantity}}" bindinput="onQuantityInput" />
+        <input
+          class="quantity-input"
+          type="number"
+          value="{{selectedQuantity}}"
+          bindinput="onQuantityInput"
+          confirm-type="done"
+        />
         <button class="quantity-step" bindtap="increaseQuantity">+</button>
       </view>
       <view class="quantity-current">当前数量：{{selectedQuantity}} 台</view>
