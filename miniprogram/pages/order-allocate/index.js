@@ -91,16 +91,10 @@ Page({
       lineNo: line.lineNo,
       model: line.model,
       demand,
-      opened: true,
       assigned: 0,
       remaining: demand,
       candidates
     };
-  },
-
-  toggleLine(e) {
-    const index = Number(e.currentTarget.dataset.index);
-    this.setData({ ["lines." + index + ".opened"]: !this.data.lines[index].opened });
   },
 
   toggleBatch(e) {
