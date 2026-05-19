@@ -1,5 +1,7 @@
 const api = require("../../utils/api");
 
+const HIDDEN_ORDER_STATUSES = ["rejected", "regional_rejected", "complete", "completed"];
+
 Page({
   data: {
     orders: [],
@@ -33,7 +35,10 @@ Page({
     this.setData({ loading: true });
     api.getOrders()
       .then(res => {
-        this.setData({ loading: false, orders: res.data || [] });
+        const orders = (res.data || []).filter(order => {
+          return HIDDEN_ORDER_STATUSES.indexOf(order.status) === -1;
+        });
+        this.setData({ loading: false, orders });
       })
       .catch(err => {
         this.setData({ loading: false });
