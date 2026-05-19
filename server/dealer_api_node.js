@@ -571,6 +571,30 @@ async function updateDealerApplicationPassword(id, password) {
   return { success: true };
 }
 
+async function assertDealerAccountActive(dealerId) {
+  const dealerCode = requireText(dealerId, "经销商ID");
+  const connection = await mysql.createConnection(dbConfig);
+  try {
+    await ensureDealerApplicationsTable(connection);
+    const [rows] = await connection.query(
+      "SELECT status FROM dealer_applications WHERE dealer_code = ? LIMIT 1",
+      [dealerCode]
+    );
+    if (!rows.length) {
+      const err = new Error("账号不存在，请重新登录");
+      err.statusCode = 401;
+      throw err;
+    }
+    if (rows[0].status !== "approved") {
+      const err = new Error("账号未审核通过或已停用，请重新登录");
+      err.statusCode = 403;
+      throw err;
+    }
+  } finally {
+    await connection.end();
+  }
+}
+
 async function resolveRegionalManagerContactName(value) {
   const name = normalize(value);
   if (!name) {
@@ -598,6 +622,7 @@ async function resolveRegionalManagerContactName(value) {
 async function createDealerOrder(payload) {
   const dealer = payload.dealer || {};
   const dealerId = requireText(dealer.id || payload.dealerId, "经销商ID");
+  await assertDealerAccountActive(dealerId);
   const dealerName = requireText(dealer.name || payload.dealerName, "经销商名称");
   const dealerRole = normalize(dealer.role || payload.dealerRole);
   const rawRegionalManagerName = requireText(

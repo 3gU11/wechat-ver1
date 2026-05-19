@@ -148,7 +148,20 @@ Page({
       });
     }).catch(err => {
       this.setData({ submitting: false });
-      wx.showToast({ title: err.message || "提交失败", icon: "none" });
+      const message = err.message || "提交失败";
+      if (message.indexOf("重新登录") !== -1 || message.indexOf("账号不存在") !== -1 || message.indexOf("已停用") !== -1) {
+        getApp().clearSession();
+        wx.showModal({
+          title: "账号已失效",
+          content: message,
+          showCancel: false,
+          success() {
+            wx.switchTab({ url: "/pages/index/index" });
+          }
+        });
+        return;
+      }
+      wx.showToast({ title: message, icon: "none" });
     });
   }
 });
