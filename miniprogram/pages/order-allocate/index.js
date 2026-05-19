@@ -99,17 +99,20 @@ Page({
   },
 
   toggleLine(e) {
-    const index = Number(e.currentTarget.dataset.index);
-    const line = this.data.lines[index];
+    const index = Number(e.currentTarget.dataset.lineIndex);
+    const lines = (this.data.lines || []).slice();
+    const line = lines[index];
     if (!line) return;
-    this.setData({ ["lines." + index + ".opened"]: !line.opened });
+    lines[index] = Object.assign({}, line, { opened: !line.opened });
+    this.setData({ lines });
   },
 
   changeQty(e) {
     const lineIndex = Number(e.currentTarget.dataset.lineIndex);
     const batchIndex = Number(e.currentTarget.dataset.batchIndex);
     const delta = Number(e.currentTarget.dataset.delta);
-    const line = this.data.lines[lineIndex];
+    const lines = (this.data.lines || []).slice();
+    const line = lines[lineIndex] ? this.cloneLine(lines[lineIndex]) : null;
     const batch = line && line.candidates && line.candidates[batchIndex];
     if (!line || !batch) return;
 
@@ -123,13 +126,14 @@ Page({
     }
     batch.quantity = next;
     batch.selected = next > 0;
-    this.recalculateLine(lineIndex, line);
+    this.recalculateLine(lineIndex, line, lines);
   },
 
   onQtyInput(e) {
     const lineIndex = Number(e.currentTarget.dataset.lineIndex);
     const batchIndex = Number(e.currentTarget.dataset.batchIndex);
-    const line = this.data.lines[lineIndex];
+    const lines = (this.data.lines || []).slice();
+    const line = lines[lineIndex] ? this.cloneLine(lines[lineIndex]) : null;
     const batch = line && line.candidates && line.candidates[batchIndex];
     if (!line || !batch) return;
 
@@ -140,7 +144,7 @@ Page({
     const max = Math.min(Number(batch.available || 0), maxByDemand);
     batch.quantity = Math.max(0, Math.min(max, value));
     batch.selected = batch.quantity > 0;
-    this.recalculateLine(lineIndex, line);
+    this.recalculateLine(lineIndex, line, lines);
   },
 
   getOtherAssigned(line, batchIndex) {
@@ -149,13 +153,21 @@ Page({
     }, 0);
   },
 
-  recalculateLine(lineIndex, line) {
+  cloneLine(line) {
+    return Object.assign({}, line, {
+      candidates: (line.candidates || []).map(item => Object.assign({}, item))
+    });
+  },
+
+  recalculateLine(lineIndex, line, lines) {
     line.assigned = (line.candidates || []).reduce((sum, item) => {
       item.selected = Number(item.quantity || 0) > 0;
       return sum + Number(item.quantity || 0);
     }, 0);
     line.remaining = Math.max(0, Number(line.demand || 0) - Number(line.assigned || 0));
-    this.setData({ ["lines." + lineIndex]: line }, () => this.updateSubmitState());
+    const nextLines = lines || (this.data.lines || []).slice();
+    nextLines[lineIndex] = line;
+    this.setData({ lines: nextLines }, () => this.updateSubmitState());
   },
 
   updateSubmitState() {
