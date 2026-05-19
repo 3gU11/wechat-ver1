@@ -1030,6 +1030,52 @@ async function aggregateAvailabilityRows() {
   return Array.from(grouped.values()).filter(row => row.available > 0);
 }
 
+async function loadModelSortMap() {
+  const connection = await mysql.createConnection(dbConfig);
+  try {
+    const [rows] = await connection.query(
+      `SELECT model_name AS model, sort_order AS sortOrder
+       FROM model_dictionary
+       WHERE enabled = 1
+       ORDER BY sort_order ASC, model_name ASC`
+    );
+    const map = new Map();
+    rows.forEach((row, index) => {
+      const model = normalize(row.model);
+      if (model && !map.has(model)) {
+        const sortOrder = row.sortOrder === null || row.sortOrder === undefined ? index : Number(row.sortOrder);
+        map.set(model, Number.isFinite(sortOrder) ? sortOrder : index);
+      }
+    });
+    return map;
+  } catch (err) {
+    return new Map();
+  } finally {
+    await connection.end();
+  }
+}
+
+function baseModelName(model) {
+  return normalize(model).replace(/\(加高\)|（加高）/g, "");
+}
+
+function modelSortValue(model, sortMap) {
+  const name = normalize(model);
+  if (sortMap.has(name)) return sortMap.get(name);
+  const baseName = baseModelName(name);
+  if (sortMap.has(baseName)) return sortMap.get(baseName);
+  return Number.MAX_SAFE_INTEGER;
+}
+
+function compareModels(a, b, sortMap) {
+  const modelA = typeof a === "string" ? a : a.model;
+  const modelB = typeof b === "string" ? b : b.model;
+  const sortA = modelSortValue(modelA, sortMap);
+  const sortB = modelSortValue(modelB, sortMap);
+  if (sortA !== sortB) return sortA - sortB;
+  return normalize(modelA).localeCompare(normalize(modelB), "zh-CN", { numeric: true });
+}
+
 async function availableModels() {
   const summary = new Map();
   for (const row of await aggregateAvailabilityRows()) {
@@ -1040,11 +1086,13 @@ async function availableModels() {
     item.available += row.available;
     item[row.inventoryType] += row.available;
   }
-  return Array.from(summary.values());
+  const sortMap = await loadModelSortMap();
+  return Array.from(summary.values()).sort((a, b) => compareModels(a, b, sortMap));
 }
 
 async function inboundPlans() {
   const groups = new Map();
+  const sortMap = await loadModelSortMap();
   for (const row of await aggregateAvailabilityRows()) {
     const groupEta = row.heightened ? "按原批次" : (row.inventoryType === "finished" ? "现货" : row.eta);
     const groupBatchNo = row.heightened ? "加高" : (row.inventoryType === "finished" ? "FINISHED-STOCK" : row.batchNo);
@@ -1075,7 +1123,9 @@ async function inboundPlans() {
   }
 
   return Array.from(groups.values())
-    .map(group => Object.assign({}, group, { items: Array.from(group.items.values()) }))
+    .map(group => Object.assign({}, group, {
+      items: Array.from(group.items.values()).sort((a, b) => compareModels(a, b, sortMap))
+    }))
     .sort((a, b) => {
       if (a.inventoryType === "heightened" || b.inventoryType === "heightened") {
         return a.inventoryType === "heightened" ? -1 : 1;
@@ -1109,7 +1159,8 @@ async function listModelOptions() {
   }
 
   const rows = await availableModels();
-  return rows.map(row => row.model).filter(Boolean).sort((a, b) => a.localeCompare(b, "zh-CN", { numeric: true }));
+  const sortMap = await loadModelSortMap();
+  return rows.map(row => row.model).filter(Boolean).sort((a, b) => compareModels(a, b, sortMap));
 }
 
 function sendJson(res, statusCode, data) {
