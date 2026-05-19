@@ -31,12 +31,14 @@
     <view class="quantity-dialog" catchtap="stopModalTap">
       <view class="quantity-title">选择数量</view>
       <view class="quantity-model">{{pendingModel}}</view>
+      <view class="quantity-desc">请输入本次申请数量</view>
 
       <view class="quantity-stepper">
         <button class="quantity-step" bindtap="decreaseQuantity">-</button>
         <input class="quantity-input" type="number" value="{{selectedQuantity}}" bindinput="onQuantityInput" />
         <button class="quantity-step" bindtap="increaseQuantity">+</button>
       </view>
+      <view class="quantity-current">当前数量：{{selectedQuantity}} 台</view>
 
       <view class="quantity-actions">
         <button class="quantity-cancel" bindtap="closeQuantityModal">取消</button>

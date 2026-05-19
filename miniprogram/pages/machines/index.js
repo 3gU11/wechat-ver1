@@ -67,7 +67,7 @@ Page({
     this.setData({
       quantityModalVisible: true,
       pendingModel: e.currentTarget.dataset.model,
-      selectedQuantity: 1
+      selectedQuantity: 0
     });
   },
 
@@ -75,30 +75,34 @@ Page({
     this.setData({
       quantityModalVisible: false,
       pendingModel: "",
-      selectedQuantity: 1
+      selectedQuantity: 0
     });
   },
 
   stopModalTap() {},
 
   decreaseQuantity() {
-    this.setData({ selectedQuantity: Math.max(1, Number(this.data.selectedQuantity || 1) - 1) });
+    this.setData({ selectedQuantity: Math.max(0, Number(this.data.selectedQuantity || 0) - 1) });
   },
 
   increaseQuantity() {
-    this.setData({ selectedQuantity: Number(this.data.selectedQuantity || 1) + 1 });
+    this.setData({ selectedQuantity: Number(this.data.selectedQuantity || 0) + 1 });
   },
 
   onQuantityInput(e) {
     let value = parseInt(e.detail.value, 10);
-    if (isNaN(value)) value = 1;
-    this.setData({ selectedQuantity: Math.max(1, value) });
+    if (isNaN(value)) value = 0;
+    this.setData({ selectedQuantity: Math.max(0, value) });
   },
 
   addPendingToCart() {
     const model = this.data.pendingModel;
-    const quantity = Number(this.data.selectedQuantity || 1);
+    const quantity = Number(this.data.selectedQuantity || 0);
     if (!model) return;
+    if (quantity <= 0) {
+      wx.showToast({ title: "请填写数量", icon: "none" });
+      return;
+    }
     const cart = wx.getStorageSync(CART_KEY) || [];
     const existing = cart.find(item => item.model === model);
     if (existing) {

@@ -121,6 +121,17 @@
   font-size: 28rpx;
 }
 
+.quantity-desc,
+.quantity-current {
+  margin-top: 12rpx;
+  color: #667085;
+  font-size: 24rpx;
+}
+
+.quantity-current {
+  text-align: center;
+}
+
 .quantity-stepper {
   width: 260rpx;
   margin: 32rpx auto 0;
