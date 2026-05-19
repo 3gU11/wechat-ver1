@@ -277,6 +277,32 @@ function reviewDealerApplication(id, status) {
   });
 }
 
+function deleteDealerApplication(id) {
+  return request({
+    url: "/admin/dealers/" + id,
+    method: "DELETE"
+  }).catch(() => {
+    const rows = getMockDealers().filter(item => item.id !== id);
+    saveMockDealers(rows);
+    return { data: { success: true }, mock: true };
+  });
+}
+
+function updateDealerPassword(id, password) {
+  return request({
+    url: "/admin/dealers/" + id + "/password",
+    method: "POST",
+    data: { password }
+  }).catch(() => {
+    const rows = getMockDealers().map(item => {
+      if (item.id === id) return Object.assign({}, item, { password });
+      return item;
+    });
+    saveMockDealers(rows);
+    return { data: { success: true }, mock: true };
+  });
+}
+
 function getDashboard() {
   return withMock(request({ url: "/dashboard" }), mock.dashboard);
 }
@@ -401,6 +427,8 @@ module.exports = {
   getRegionalManagers,
   getDealerApplications,
   reviewDealerApplication,
+  deleteDealerApplication,
+  updateDealerPassword,
   requireLogin,
   isAdmin,
   getDashboard,

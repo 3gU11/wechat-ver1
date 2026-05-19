@@ -50,13 +50,19 @@
 
 .actions {
   display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
   margin-top: 22rpx;
 }
 
 .reject-btn,
-.approve-btn {
+.approve-btn,
+.password-btn,
+.delete-btn {
   height: 72rpx;
   line-height: 72rpx;
+  min-width: 132rpx;
+  padding: 0 20rpx;
   border-radius: 8rpx;
   font-size: 26rpx;
 }
@@ -69,6 +75,16 @@
 .approve-btn {
   background: #0f766e;
   color: #ffffff;
+}
+
+.password-btn {
+  background: #eef6f5;
+  color: #0f766e;
+}
+
+.delete-btn {
+  background: #fff1f2;
+  color: #be123c;
 }
 
 

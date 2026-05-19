@@ -530,6 +530,47 @@ async function reviewDealerApplication(id, status) {
   return { success: true };
 }
 
+async function deleteDealerApplication(id) {
+  const dealerCode = requireText(id, "经销商申请ID");
+  const connection = await mysql.createConnection(dbConfig);
+  try {
+    await ensureDealerApplicationsTable(connection);
+    const [result] = await connection.query(
+      "DELETE FROM dealer_applications WHERE dealer_code = ?",
+      [dealerCode]
+    );
+    if (!result.affectedRows) {
+      const err = new Error("未找到经销商账号");
+      err.statusCode = 404;
+      throw err;
+    }
+  } finally {
+    await connection.end();
+  }
+  return { success: true };
+}
+
+async function updateDealerApplicationPassword(id, password) {
+  const dealerCode = requireText(id, "经销商申请ID");
+  const nextPassword = requireText(password, "新密码");
+  const connection = await mysql.createConnection(dbConfig);
+  try {
+    await ensureDealerApplicationsTable(connection);
+    const [result] = await connection.query(
+      "UPDATE dealer_applications SET password = ? WHERE dealer_code = ?",
+      [nextPassword, dealerCode]
+    );
+    if (!result.affectedRows) {
+      const err = new Error("未找到经销商账号");
+      err.statusCode = 404;
+      throw err;
+    }
+  } finally {
+    await connection.end();
+  }
+  return { success: true };
+}
+
 async function resolveRegionalManagerContactName(value) {
   const name = normalize(value);
   if (!name) {
@@ -1231,6 +1272,17 @@ const server = http.createServer(async (req, res) => {
     if (reviewMatch && req.method === "POST") {
       const payload = await readJsonBody(req);
       sendJson(res, 200, await reviewDealerApplication(decodeURIComponent(reviewMatch[1]), payload.status));
+      return;
+    }
+    const passwordMatch = url.pathname.match(/^\/api\/dealer\/admin\/dealers\/([^/]+)\/password$/);
+    if (passwordMatch && req.method === "POST") {
+      const payload = await readJsonBody(req);
+      sendJson(res, 200, await updateDealerApplicationPassword(decodeURIComponent(passwordMatch[1]), payload.password));
+      return;
+    }
+    const deleteDealerMatch = url.pathname.match(/^\/api\/dealer\/admin\/dealers\/([^/]+)$/);
+    if (deleteDealerMatch && req.method === "DELETE") {
+      sendJson(res, 200, await deleteDealerApplication(decodeURIComponent(deleteDealerMatch[1])));
       return;
     }
     if (url.pathname === "/api/dealer/orders" && req.method === "POST") {

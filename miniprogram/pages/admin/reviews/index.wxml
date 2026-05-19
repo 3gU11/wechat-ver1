@@ -2,7 +2,7 @@
   <view class="head-row">
     <view>
       <view class="section-title">账号注册审核</view>
-      <view class="desc">审核普通经销商和大区经理账号，只有通过后才能登录。</view>
+      <view class="desc">审核普通经销商和大区经理账号，也可以删除账号或修改登录密码。</view>
     </view>
     <button class="logout-btn" bindtap="logout">退出</button>
   </view>
@@ -22,9 +22,12 @@
         </view>
       </view>
       <view class="time">申请时间：{{item.createdAt}}</view>
-      <view wx:if="{{item.status === 'pending'}}" class="actions">
-        <button class="reject-btn" data-id="{{item.id}}" data-status="rejected" bindtap="review">拒绝</button>
-        <button class="approve-btn" data-id="{{item.id}}" data-status="approved" bindtap="review">通过</button>
+
+      <view class="actions">
+        <button wx:if="{{item.status === 'pending'}}" class="reject-btn" data-id="{{item.id}}" data-status="rejected" bindtap="review">拒绝</button>
+        <button wx:if="{{item.status === 'pending'}}" class="approve-btn" data-id="{{item.id}}" data-status="approved" bindtap="review">通过</button>
+        <button class="password-btn" data-id="{{item.id}}" bindtap="changePassword">改密码</button>
+        <button class="delete-btn" data-id="{{item.id}}" data-name="{{item.companyName}}" bindtap="deleteAccount">删除</button>
       </view>
     </view>
   </view>
