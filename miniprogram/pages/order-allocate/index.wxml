@@ -10,26 +10,29 @@
 
   <view class="line-list">
     <view class="card line-card" wx:for="{{lines}}" wx:for-item="line" wx:for-index="lineIndex" wx:key="lineNo">
-      <view class="line-head">
+      <view class="line-head" data-index="{{lineIndex}}" bindtap="toggleLine">
         <view>
           <view class="model">{{line.model}}</view>
           <view class="assigned">已分配 {{line.assigned}} / {{line.demand}} 台，剩余 {{line.remaining}} 台</view>
         </view>
-        <view class="line-status {{line.assigned === line.demand ? 'done' : line.assigned > 0 ? 'partial' : ''}}">
-          {{line.assigned === line.demand ? '已满足' : line.assigned > 0 ? '部分分配' : '未分配'}}
+        <view class="line-side">
+          <view class="line-status {{line.assigned === line.demand ? 'done' : line.assigned > 0 ? 'partial' : ''}}">
+            {{line.assigned === line.demand ? '已满足' : line.assigned > 0 ? '部分分配' : '未分配'}}
+          </view>
+          <view class="fold">{{line.opened ? '收起' : '展开'}}</view>
         </view>
       </view>
 
-      <view class="batch-list">
+      <view wx:if="{{line.opened}}" class="batch-list">
         <view wx:if="{{!line.candidates.length}}" class="empty-batches">当前机型暂无可分配批次</view>
         <view
-          class="batch-row {{batch.selected ? 'selected' : ''}}"
+          class="batch-row {{batch.quantity > 0 ? 'selected' : ''}}"
           wx:for="{{line.candidates}}"
           wx:for-item="batch"
           wx:for-index="batchIndex"
           wx:key="key"
         >
-          <view class="batch-main" data-line-index="{{lineIndex}}" data-batch-index="{{batchIndex}}" bindtap="toggleBatch">
+          <view class="batch-main">
             <view>
               <view class="batch-no">{{batch.batchNo}}</view>
               <view class="batch-meta">{{batch.inventoryTypeText}} · 预计入库 {{batch.eta || '-'}}</view>
@@ -38,7 +41,7 @@
             <view class="recommend {{batch.recommended ? 'yes' : 'no'}}">{{batch.recommended ? '推荐' : '不推荐'}}</view>
           </view>
 
-          <view wx:if="{{batch.selected}}" class="qty-row">
+          <view class="qty-row">
             <button data-line-index="{{lineIndex}}" data-batch-index="{{batchIndex}}" data-delta="-1" bindtap="changeQty">-</button>
             <input type="number" value="{{batch.quantity}}" data-line-index="{{lineIndex}}" data-batch-index="{{batchIndex}}" bindinput="onQtyInput" />
             <button data-line-index="{{lineIndex}}" data-batch-index="{{batchIndex}}" data-delta="1" bindtap="changeQty">+</button>

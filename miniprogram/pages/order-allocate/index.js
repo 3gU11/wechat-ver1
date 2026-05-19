@@ -73,12 +73,12 @@ Page({
   buildLine(line, batches) {
     const demand = Number(line.quantity || 0);
     const candidates = batches
-      .filter(item => item.model === line.model && item.available > 0)
+      .filter(item => item.model === line.model && Number(item.available || 0) > 0)
       .map(item => Object.assign({}, item, {
         key: allocationKey(item),
         recommended: Number(item.available || 0) >= demand,
         selected: false,
-        quantity: Math.min(demand, Number(item.available || 0))
+        quantity: 0
       }))
       .sort((a, b) => {
         if (a.recommended !== b.recommended) return a.recommended ? -1 : 1;
@@ -91,31 +91,18 @@ Page({
       lineNo: line.lineNo,
       model: line.model,
       demand,
+      opened: false,
       assigned: 0,
       remaining: demand,
       candidates
     };
   },
 
-  toggleBatch(e) {
-    const lineIndex = Number(e.currentTarget.dataset.lineIndex);
-    const batchIndex = Number(e.currentTarget.dataset.batchIndex);
-    const line = this.data.lines[lineIndex];
-    const batch = line.candidates[batchIndex];
-    if (!line || !batch) return;
-
-    batch.selected = !batch.selected;
-    if (batch.selected) {
-      const remaining = Math.max(0, Number(line.demand || 0) - Number(line.assigned || 0));
-      if (remaining <= 0) {
-        batch.selected = false;
-        wx.showToast({ title: line.model + " 已分配满", icon: "none" });
-        this.recalculateLine(lineIndex, line);
-        return;
-      }
-      batch.quantity = Math.min(remaining, Number(batch.available || 0));
-    }
-    this.recalculateLine(lineIndex, line);
+  toggleLine(e) {
+    const index = Number(e.currentTarget.dataset.index);
+    const line = this.data.lines[index];
+    if (!line) return;
+    this.setData({ ["lines." + index + ".opened"]: !line.opened });
   },
 
   changeQty(e) {
@@ -123,21 +110,19 @@ Page({
     const batchIndex = Number(e.currentTarget.dataset.batchIndex);
     const delta = Number(e.currentTarget.dataset.delta);
     const line = this.data.lines[lineIndex];
-    const batch = line.candidates[batchIndex];
+    const batch = line && line.candidates && line.candidates[batchIndex];
     if (!line || !batch) return;
 
     const current = Number(batch.quantity || 0);
-    const otherAssigned = (line.candidates || []).reduce((sum, item, index) => {
-      return index === batchIndex || !item.selected ? sum : sum + Number(item.quantity || 0);
-    }, 0);
+    const otherAssigned = this.getOtherAssigned(line, batchIndex);
     const maxByDemand = Math.max(0, Number(line.demand || 0) - otherAssigned);
-    const max = Math.max(1, Math.min(Number(batch.available || 1), maxByDemand));
-    const next = Math.max(1, Math.min(max, current + delta));
+    const max = Math.min(Number(batch.available || 0), maxByDemand);
+    const next = Math.max(0, Math.min(max, current + delta));
     if (current + delta > max) {
       wx.showToast({ title: "不能超过该机型剩余需求", icon: "none" });
     }
     batch.quantity = next;
-    batch.selected = true;
+    batch.selected = next > 0;
     this.recalculateLine(lineIndex, line);
   },
 
@@ -145,24 +130,29 @@ Page({
     const lineIndex = Number(e.currentTarget.dataset.lineIndex);
     const batchIndex = Number(e.currentTarget.dataset.batchIndex);
     const line = this.data.lines[lineIndex];
-    const batch = line.candidates[batchIndex];
+    const batch = line && line.candidates && line.candidates[batchIndex];
     if (!line || !batch) return;
 
     let value = parseInt(e.detail.value, 10);
-    if (isNaN(value)) value = 1;
-    const otherAssigned = (line.candidates || []).reduce((sum, item, index) => {
-      return index === batchIndex || !item.selected ? sum : sum + Number(item.quantity || 0);
-    }, 0);
+    if (isNaN(value)) value = 0;
+    const otherAssigned = this.getOtherAssigned(line, batchIndex);
     const maxByDemand = Math.max(0, Number(line.demand || 0) - otherAssigned);
-    const max = Math.max(1, Math.min(Number(batch.available || 1), maxByDemand));
-    batch.quantity = Math.max(1, Math.min(max, value));
-    batch.selected = true;
+    const max = Math.min(Number(batch.available || 0), maxByDemand);
+    batch.quantity = Math.max(0, Math.min(max, value));
+    batch.selected = batch.quantity > 0;
     this.recalculateLine(lineIndex, line);
+  },
+
+  getOtherAssigned(line, batchIndex) {
+    return (line.candidates || []).reduce((sum, item, index) => {
+      return index === batchIndex ? sum : sum + Number(item.quantity || 0);
+    }, 0);
   },
 
   recalculateLine(lineIndex, line) {
     line.assigned = (line.candidates || []).reduce((sum, item) => {
-      return item.selected ? sum + Number(item.quantity || 0) : sum;
+      item.selected = Number(item.quantity || 0) > 0;
+      return sum + Number(item.quantity || 0);
     }, 0);
     line.remaining = Math.max(0, Number(line.demand || 0) - Number(line.assigned || 0));
     this.setData({ ["lines." + lineIndex]: line }, () => this.updateSubmitState());
@@ -197,7 +187,7 @@ Page({
       lineNo: line.lineNo,
       model: line.model,
       allocations: line.candidates
-        .filter(batch => batch.selected)
+        .filter(batch => Number(batch.quantity || 0) > 0)
         .map(batch => ({
           model: line.model,
           batchNo: batch.batchNo,

@@ -39,6 +39,19 @@
   gap: 20rpx;
 }
 
+.line-side {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8rpx;
+}
+
+.fold {
+  color: #0f766e;
+  font-size: 24rpx;
+}
+
 .model {
   color: #111827;
   font-size: 32rpx;
