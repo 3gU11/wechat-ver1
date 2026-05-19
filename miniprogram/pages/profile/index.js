@@ -1,12 +1,17 @@
 Page({
   data: {
-    account: {}
+    account: {},
+    avatarText: "经"
   },
 
   onShow() {
     getApp().getSession(account => {
+      const displayName = account && (account.name || account.contact_name || account.contactName || account.phone);
+      const avatarText = displayName ? Array.from(String(displayName).trim())[0] || "经" : "经";
+
       this.setData({
-        account: account || null
+        account: account || null,
+        avatarText
       });
     });
   },

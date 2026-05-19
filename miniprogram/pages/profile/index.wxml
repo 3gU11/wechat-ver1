@@ -12,7 +12,7 @@
   </view>
 
   <view wx:else class="card profile-card">
-    <view class="avatar">经</view>
+    <view class="avatar">{{avatarText}}</view>
     <view>
       <view class="name">{{account.name || '经销商账号'}}</view>
       <view class="contact">{{account.phone}} · {{account.role === 'admin' ? '管理员' : account.role === 'regional_manager' ? '大区经理' : '普通经销商'}}</view>
