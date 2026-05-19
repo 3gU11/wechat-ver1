@@ -354,7 +354,7 @@ function getOrders() {
   const account = app.globalData.account || {};
   const query = {};
   if (account.role === "regional_manager") {
-    query.regionalManagerName = account.name || account.contactName || "";
+    query.regionalManagerName = account.contactName || account.name || "";
   } else if (account.role !== "admin") {
     query.dealerId = account.id || "";
   }
@@ -373,8 +373,8 @@ function reviewDealerOrder(orderId, status, note) {
     data: {
       status,
       note: note || "",
-      regionalManagerName: account.name || account.contactName || "",
-      reviewerName: account.name || account.contactName || account.phone || ""
+      regionalManagerName: account.contactName || account.name || "",
+      reviewerName: account.contactName || account.name || account.phone || ""
     }
   });
 }
@@ -388,8 +388,8 @@ function allocateDealerOrder(orderId, items, note) {
     data: {
       items: items || [],
       note: note || "",
-      regionalManagerName: account.name || account.contactName || "",
-      reviewerName: account.name || account.contactName || account.phone || ""
+      regionalManagerName: account.contactName || account.name || "",
+      reviewerName: account.contactName || account.name || account.phone || ""
     }
   });
 }

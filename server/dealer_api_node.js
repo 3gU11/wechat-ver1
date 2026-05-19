@@ -529,15 +529,42 @@ async function reviewDealerApplication(id, status) {
   return { success: true };
 }
 
+async function resolveRegionalManagerContactName(value) {
+  const name = normalize(value);
+  if (!name) {
+    return "";
+  }
+  const connection = await mysql.createConnection(dbConfig);
+  try {
+    await ensureDealerApplicationsTable(connection);
+    const [rows] = await connection.query(
+      `SELECT contact_name AS contactName
+       FROM dealer_applications
+       WHERE role = 'regional_manager'
+         AND status = 'approved'
+         AND (company_name = ? OR contact_name = ? OR dealer_code = ? OR phone = ?)
+       ORDER BY updated_at DESC
+       LIMIT 1`,
+      [name, name, name, name]
+    );
+    return rows.length ? normalize(rows[0].contactName) : name;
+  } finally {
+    await connection.end();
+  }
+}
+
 async function createDealerOrder(payload) {
   const dealer = payload.dealer || {};
   const dealerId = requireText(dealer.id || payload.dealerId, "经销商ID");
   const dealerName = requireText(dealer.name || payload.dealerName, "经销商名称");
   const dealerRole = normalize(dealer.role || payload.dealerRole);
-  const regionalManagerName = requireText(
-    dealer.regionalManagerName || payload.regionalManagerName || (dealerRole === "regional_manager" ? dealerName : ""),
+  const rawRegionalManagerName = requireText(
+    dealer.regionalManagerName || payload.regionalManagerName || (dealerRole === "regional_manager" ? (dealer.contactName || dealerName) : ""),
     "所属大区经理"
   );
+  const regionalManagerName = dealerRole === "regional_manager"
+    ? normalize(dealer.contactName || rawRegionalManagerName)
+    : await resolveRegionalManagerContactName(rawRegionalManagerName);
   const rawItems = Array.isArray(payload.items) && payload.items.length ? payload.items : [payload];
   const merged = new Map();
 
