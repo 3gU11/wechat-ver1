@@ -1,0 +1,147 @@
+.summary-card,
+.line-card,
+.note-card {
+  padding: 24rpx;
+}
+
+.order-id {
+  color: #111827;
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.summary-row,
+.summary-note,
+.assigned,
+.batch-meta {
+  margin-top: 10rpx;
+  color: #667085;
+  font-size: 25rpx;
+  line-height: 1.5;
+}
+
+.summary-note {
+  padding: 12rpx 14rpx;
+  border-radius: 8rpx;
+  background: #f8fafc;
+}
+
+.line-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.line-head,
+.batch-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20rpx;
+}
+
+.model {
+  color: #111827;
+  font-size: 32rpx;
+  font-weight: 700;
+}
+
+.line-status,
+.recommend {
+  flex-shrink: 0;
+  min-width: 112rpx;
+  height: 48rpx;
+  line-height: 48rpx;
+  border-radius: 8rpx;
+  background: #fff7ed;
+  color: #c2410c;
+  text-align: center;
+  font-size: 23rpx;
+}
+
+.line-status.done,
+.recommend.yes {
+  background: #ecfdf3;
+  color: #047857;
+}
+
+.line-status.partial {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.recommend.no {
+  background: #f2f4f7;
+  color: #667085;
+}
+
+.batch-list {
+  margin-top: 18rpx;
+  border-top: 1rpx solid #eef2f6;
+}
+
+.batch-row {
+  padding: 18rpx 0;
+  border-bottom: 1rpx solid #eef2f6;
+}
+
+.batch-row.selected {
+  background: #f8fafc;
+}
+
+.batch-no {
+  color: #111827;
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.qty-row {
+  width: 240rpx;
+  margin-top: 16rpx;
+  display: flex;
+  align-items: center;
+  border: 1rpx solid #d0d5dd;
+  border-radius: 8rpx;
+  overflow: hidden;
+}
+
+.qty-row button {
+  width: 64rpx;
+  height: 58rpx;
+  line-height: 58rpx;
+  padding: 0;
+  border-radius: 0;
+  background: #ffffff;
+  color: #111827;
+}
+
+.qty-row input {
+  flex: 1;
+  height: 58rpx;
+  text-align: center;
+  font-size: 26rpx;
+}
+
+.empty-batches {
+  padding: 32rpx 0;
+  color: #98a2b3;
+  text-align: center;
+  font-size: 25rpx;
+}
+
+.label {
+  margin-bottom: 12rpx;
+  color: #344054;
+  font-size: 25rpx;
+  font-weight: 600;
+}
+
+textarea {
+  width: 100%;
+  min-height: 140rpx;
+  font-size: 28rpx;
+}
+
+.submit-btn {
+  width: 100%;
+  margin-top: 28rpx;
+}

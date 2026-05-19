@@ -1,5 +1,7 @@
 const api = require("../../utils/api");
 
+const CART_KEY = "dealerOrderCart";
+
 Page({
   data: {
     loading: true,
@@ -44,6 +46,14 @@ Page({
 
   createOrder(e) {
     const model = e.currentTarget.dataset.model;
-    wx.navigateTo({ url: "/pages/order-create/index?model=" + model });
+    const cart = wx.getStorageSync(CART_KEY) || [];
+    const existing = cart.find(item => item.model === model);
+    if (existing) {
+      existing.quantity = Number(existing.quantity || 0) + 1;
+    } else {
+      cart.push({ model, quantity: 1 });
+    }
+    wx.setStorageSync(CART_KEY, cart);
+    wx.navigateTo({ url: "/pages/order-create/index" });
   }
 });

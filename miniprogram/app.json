@@ -5,6 +5,7 @@
     "pages/machines/index",
     "pages/batches/index",
     "pages/order-create/index",
+    "pages/order-allocate/index",
     "pages/orders/index",
     "pages/profile/index",
     "pages/auth/login/index",

@@ -90,6 +90,10 @@
   font-size: 24rpx;
 }
 
+.allocate-btn {
+  width: 180rpx;
+}
+
 .approve-btn {
   background: #0f766e;
 }

@@ -7,7 +7,7 @@ Page({
     isRegionalManager: false,
     reviewingId: "",
     statusMap: {
-      regional_pending: "大区待审",
+      regional_pending: "待大区分配",
       regional_rejected: "大区驳回",
       pending: "待审核",
       approved: "已通过",
@@ -43,6 +43,11 @@ Page({
 
   goCreate() {
     wx.navigateTo({ url: "/pages/order-create/index" });
+  },
+
+  goAllocate(e) {
+    const id = e.currentTarget.dataset.id;
+    wx.navigateTo({ url: "/pages/order-allocate/index?orderNo=" + encodeURIComponent(id) });
   },
 
   reviewOrder(e) {

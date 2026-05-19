@@ -10,6 +10,7 @@ Page({
   data: {
     loading: true,
     isLoggedIn: false,
+    canViewInbound: false,
     accountName: "",
     loadError: "",
     plans: [],
@@ -30,10 +31,23 @@ Page({
     this.refreshCartCount();
     getApp().getSession(account => {
       if (!account) {
-        this.setData({ loading: false, isLoggedIn: false, accountName: "", loadError: "", plans: [] });
+        this.setData({ loading: false, isLoggedIn: false, canViewInbound: false, accountName: "", loadError: "", plans: [] });
         return;
       }
-      this.setData({ isLoggedIn: true, accountName: account.name || account.phone || "经销商", loadError: "" });
+      if (account.role !== "regional_manager") {
+        this.setData({
+          loading: false,
+          isLoggedIn: true,
+          canViewInbound: false,
+          accountName: account.name || account.phone || "经销商",
+          loadError: "",
+          plans: [],
+          filteredPlans: [],
+          emptyDesc: "普通经销商不可查看预计入库，请从首页选择机型提交需求单。"
+        });
+        return;
+      }
+      this.setData({ isLoggedIn: true, canViewInbound: true, accountName: account.name || account.phone || "经销商", loadError: "" });
       this.loadPageData();
     });
   },

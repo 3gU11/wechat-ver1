@@ -379,6 +379,21 @@ function reviewDealerOrder(orderId, status, note) {
   });
 }
 
+function allocateDealerOrder(orderId, items, note) {
+  const app = getAppSafe();
+  const account = app.globalData.account || {};
+  return request({
+    url: "/orders/" + encodeURIComponent(orderId) + "/regional-allocate",
+    method: "POST",
+    data: {
+      items: items || [],
+      note: note || "",
+      regionalManagerName: account.name || account.contactName || "",
+      reviewerName: account.name || account.contactName || account.phone || ""
+    }
+  });
+}
+
 module.exports = {
   login,
   registerDealer,
@@ -395,5 +410,6 @@ module.exports = {
   getBatches,
   createOrder,
   getOrders,
-  reviewDealerOrder
+  reviewDealerOrder,
+  allocateDealerOrder
 };

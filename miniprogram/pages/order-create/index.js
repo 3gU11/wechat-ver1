@@ -3,7 +3,7 @@
 const CART_KEY = "dealerOrderCart";
 
 function cartKey(item) {
-  return [item.inventoryType || "", item.batchNo || "", item.model || ""].join("|");
+  return [item.model || ""].join("|");
 }
 
 function accountRegionalManagerName(account) {
@@ -62,17 +62,13 @@ Page({
   addInitialItem(options) {
     const item = {
       model: options.model,
-      batchNo: options.batchNo || "",
-      eta: options.eta || "",
-      inventoryType: options.inventoryType || "",
-      available: Number(options.available || 1),
       quantity: 1
     };
     const cart = this.getCart();
     const key = cartKey(item);
     const existing = cart.find(row => cartKey(row) === key);
     if (existing) {
-      existing.quantity = Math.min(Number(existing.available || item.available || 1), Number(existing.quantity || 0) + 1);
+      existing.quantity = Number(existing.quantity || 0) + 1;
     } else {
       cart.push(item);
     }
@@ -94,10 +90,6 @@ Page({
     if (nextQty < 1) {
       cart.splice(index, 1);
       this.saveCart(cart);
-      return;
-    }
-    if (nextQty > Number(item.available || 0)) {
-      wx.showToast({ title: "不能超过可用数量", icon: "none" });
       return;
     }
     item.quantity = nextQty;
@@ -126,13 +118,6 @@ Page({
       wx.showToast({ title: "当前账号未绑定所属大区经理", icon: "none" });
       return;
     }
-    for (const item of cart) {
-      if (Number(item.quantity || 0) > Number(item.available || 0)) {
-        wx.showToast({ title: item.model + " 超过可用数量", icon: "none" });
-        return;
-      }
-    }
-
     this.setData({ submitting: true });
     api.createOrder({
       regionalManagerName: this.data.regionalManagerName,
@@ -143,9 +128,6 @@ Page({
       remark: form.remark,
       items: cart.map(item => ({
         model: item.model,
-        batchNo: item.batchNo,
-        eta: item.eta,
-        inventoryType: item.inventoryType,
         quantity: Number(item.quantity || 1)
       }))
     }).then(res => {

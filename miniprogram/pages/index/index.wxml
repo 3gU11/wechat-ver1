@@ -37,7 +37,7 @@
     <view class="hero">
       <view>
         <view class="hero-title">可订机型</view>
-        <view class="hero-subtitle">{{account.name}}，成品和在制分开展示，按预计入库时间加入购物车。</view>
+        <view class="hero-subtitle">{{account.name}}，普通经销商提交机型需求，大区经理分配具体批次。</view>
       </view>
     </view>
 
@@ -55,10 +55,10 @@
       </view>
     </view>
     <view wx:else class="card table-card">
-      <view class="muted">公开库存表仅大区经理可见。普通经销商可进入预计入库页面选择机型并提交订单。</view>
+      <view class="muted">公开库存表仅大区经理可见。普通经销商可选择机型并提交需求单。</view>
     </view>
 
-    <button class="primary-btn action-btn" bindtap="goMachines">查看预计入库并加入购物车</button>
+    <button class="primary-btn action-btn" bindtap="goMachines">{{isRegionalManager ? '查看预计入库' : '选择机型提交需求'}}</button>
     <button class="secondary-btn action-btn" bindtap="goCart">进入购物车提交订单</button>
   </view>
 </view>

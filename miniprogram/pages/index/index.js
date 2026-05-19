@@ -104,7 +104,11 @@
   },
 
   goMachines() {
-    wx.switchTab({ url: "/pages/inbound/index" });
+    if (this.data.isRegionalManager) {
+      wx.switchTab({ url: "/pages/inbound/index" });
+      return;
+    }
+    wx.navigateTo({ url: "/pages/machines/index" });
   },
 
   goCart() {

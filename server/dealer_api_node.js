@@ -544,10 +544,10 @@ async function createDealerOrder(payload) {
   for (const rawItem of rawItems) {
     const model = requireText(rawItem.model, "机型");
     const inventoryType = normalize(rawItem.inventoryType);
-    const batchNo = normalize(rawItem.batchNo) || (inventoryType === "finished" ? "FINISHED-STOCK" : "");
+    const batchNo = normalize(rawItem.batchNo) || "";
     const eta = normalize(rawItem.eta);
     const quantity = Math.max(1, Math.trunc(Number(rawItem.quantity || 1)));
-    const key = reservationKey({ inventoryType, batchNo, model });
+    const key = batchNo || inventoryType ? reservationKey({ inventoryType, batchNo, model }) : `demand|${model}`;
     if (!merged.has(key)) {
       merged.set(key, { model, batchNo, eta, inventoryType, quantity: 0, available: Number(rawItem.available || 0) });
     }
@@ -561,14 +561,20 @@ async function createDealerOrder(payload) {
     throw err;
   }
 
-  const availableRows = await aggregateAvailabilityRows();
-  const availableMap = new Map(availableRows.map(row => [reservationKey(row), Number(row.available || 0)]));
-  for (const item of items) {
-    const available = availableMap.get(reservationKey(item)) || 0;
-    if (item.quantity > available) {
-      const err = new Error(`${item.model} 可用数量不足，当前可用 ${available}，购物车数量 ${item.quantity}`);
-      err.statusCode = 400;
-      throw err;
+  const batchItems = items.filter(item => item.batchNo || item.inventoryType);
+  if (batchItems.length) {
+    const availableRows = await aggregateAvailabilityRows();
+    const availableMap = new Map(availableRows.map(row => [reservationKey(row), Number(row.available || 0)]));
+    for (const item of batchItems) {
+      const normalizedItem = Object.assign({}, item, {
+        batchNo: item.batchNo || (item.inventoryType === "finished" ? "FINISHED-STOCK" : "")
+      });
+      const available = availableMap.get(reservationKey(normalizedItem)) || 0;
+      if (item.quantity > available) {
+        const err = new Error(`${item.model} 可用数量不足，当前可用 ${available}，购物车数量 ${item.quantity}`);
+        err.statusCode = 400;
+        throw err;
+      }
     }
   }
 
@@ -713,6 +719,11 @@ async function reviewDealerOrderByRegionalManager(orderNo, payload) {
     err.statusCode = 400;
     throw err;
   }
+  if (nextStatus === "approved") {
+    const err = new Error("请先分配具体批次，再提交工厂审核");
+    err.statusCode = 400;
+    throw err;
+  }
 
   const regionalManagerName = normalize(payload.regionalManagerName);
   const reviewerName = normalize(payload.reviewerName || payload.reviewedBy || regionalManagerName);
@@ -755,6 +766,159 @@ async function reviewDealerOrderByRegionalManager(orderNo, payload) {
   }
 }
 
+async function allocateDealerOrderByRegionalManager(orderNo, payload) {
+  const orderId = requireText(orderNo, "订单号");
+  const regionalManagerName = normalize(payload.regionalManagerName);
+  const reviewerName = normalize(payload.reviewerName || payload.reviewedBy || regionalManagerName);
+  const note = normalize(payload.note || payload.regionalReviewNote || "");
+  const rawItems = Array.isArray(payload.items) ? payload.items : [];
+  if (!rawItems.length) {
+    const err = new Error("请至少分配一个批次");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const connection = await mysql.createConnection(dbConfig);
+  try {
+    await ensureDealerOrdersTable(connection);
+    await connection.beginTransaction();
+
+    const where = ["order_no = ?", "status = 'regional_pending'"];
+    const params = [orderId];
+    if (regionalManagerName) {
+      where.push("regional_manager_name = ?");
+      params.push(regionalManagerName);
+    }
+    const [rows] = await connection.query(
+      `SELECT *
+       FROM dealer_orders
+       WHERE ${where.join(" AND ")}
+       ORDER BY line_no ASC
+       FOR UPDATE`,
+      params
+    );
+    if (!rows.length) {
+      const err = new Error("订单不存在、已分配，或不属于当前大区经理");
+      err.statusCode = 404;
+      throw err;
+    }
+
+    const demandByModel = new Map();
+    for (const row of rows) {
+      const model = normalize(row.model);
+      demandByModel.set(model, (demandByModel.get(model) || 0) + Number(row.quantity || 0));
+    }
+
+    const allocations = [];
+    for (const rawLine of rawItems) {
+      const model = requireText(rawLine.model, "机型");
+      const lineAllocations = Array.isArray(rawLine.allocations) ? rawLine.allocations : [rawLine];
+      for (const rawAllocation of lineAllocations) {
+        const quantity = Math.max(0, Math.trunc(Number(rawAllocation.quantity || 0)));
+        if (!quantity) continue;
+        const inventoryType = requireText(rawAllocation.inventoryType, "库存类型");
+        const batchNo = normalize(rawAllocation.batchNo) || (inventoryType === "finished" ? "FINISHED-STOCK" : "");
+        allocations.push({
+          model,
+          batchNo: requireText(batchNo, "批次号"),
+          eta: normalize(rawAllocation.eta),
+          inventoryType,
+          quantity
+        });
+      }
+    }
+
+    if (!allocations.length) {
+      const err = new Error("请至少分配一个有效批次数量");
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const allocatedByModel = new Map();
+    for (const allocation of allocations) {
+      allocatedByModel.set(allocation.model, (allocatedByModel.get(allocation.model) || 0) + allocation.quantity);
+    }
+    for (const [model, demandQty] of demandByModel.entries()) {
+      const allocatedQty = allocatedByModel.get(model) || 0;
+      if (allocatedQty !== demandQty) {
+        const err = new Error(`${model} 分配数量必须等于需求数量 ${demandQty}，当前分配 ${allocatedQty}`);
+        err.statusCode = 400;
+        throw err;
+      }
+    }
+    for (const model of allocatedByModel.keys()) {
+      if (!demandByModel.has(model)) {
+        const err = new Error(`${model} 不在当前订单需求中`);
+        err.statusCode = 400;
+        throw err;
+      }
+    }
+
+    const requestedByBatch = new Map();
+    for (const allocation of allocations) {
+      const key = reservationKey(allocation);
+      requestedByBatch.set(key, (requestedByBatch.get(key) || 0) + allocation.quantity);
+    }
+    const availableRows = await aggregateAvailabilityRows();
+    const availableMap = new Map(availableRows.map(row => [reservationKey(row), Number(row.available || 0)]));
+    for (const [key, quantity] of requestedByBatch.entries()) {
+      const available = availableMap.get(key) || 0;
+      if (quantity > available) {
+        const err = new Error(`批次可用数量不足，当前可用 ${available}，分配 ${quantity}`);
+        err.statusCode = 400;
+        throw err;
+      }
+    }
+
+    const header = rows[0];
+    await connection.query("DELETE FROM dealer_orders WHERE order_no = ? AND status = 'regional_pending'", [orderId]);
+    for (let index = 0; index < allocations.length; index += 1) {
+      const item = allocations[index];
+      await connection.query(
+        `INSERT INTO dealer_orders
+         (order_no, line_no, dealer_id, dealer_name, dealer_phone, regional_manager_name, customer_name, contact_name, contact_phone,
+          model, batch_no, eta, inventory_type, quantity, approved_qty, allocated_qty, delivery_date, remark, status,
+          regional_review_status, regional_review_note, regional_reviewed_by, regional_reviewed_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, 'pending',
+          'approved', ?, ?, NOW())`,
+        [
+          orderId,
+          index + 1,
+          header.dealer_id,
+          header.dealer_name,
+          header.dealer_phone,
+          header.regional_manager_name,
+          header.customer_name,
+          header.contact_name,
+          header.contact_phone,
+          item.model,
+          item.batchNo,
+          item.eta,
+          item.inventoryType,
+          item.quantity,
+          header.delivery_date,
+          header.remark,
+          note,
+          reviewerName
+        ]
+      );
+    }
+
+    await connection.commit();
+    return {
+      id: orderId,
+      status: "pending",
+      itemCount: allocations.length,
+      message: "批次已分配，订单已进入工厂审核"
+    };
+  } catch (err) {
+    try { await connection.rollback(); } catch (rollbackErr) {}
+    throw err;
+  } finally {
+    await connection.end();
+  }
+}
+
 function reservationKey(row) {
   if (row.heightened || row.inventoryType === "heightened") {
     return [
@@ -782,6 +946,7 @@ async function getActiveOrderHoldMap() {
         SUM(GREATEST(quantity - allocated_qty, 0)) AS qty
        FROM dealer_orders
        WHERE status IN ('regional_pending', 'pending', 'approved')
+         AND batch_no <> ''
          AND quantity > allocated_qty
        GROUP BY model, batch_no, inventory_type`
     );
@@ -998,6 +1163,12 @@ const server = http.createServer(async (req, res) => {
     if (regionalOrderReviewMatch && req.method === "POST") {
       const payload = await readJsonBody(req);
       sendJson(res, 200, await reviewDealerOrderByRegionalManager(decodeURIComponent(regionalOrderReviewMatch[1]), payload));
+      return;
+    }
+    const regionalOrderAllocateMatch = url.pathname.match(/^\/api\/dealer\/orders\/([^/]+)\/regional-allocate$/);
+    if (regionalOrderAllocateMatch && req.method === "POST") {
+      const payload = await readJsonBody(req);
+      sendJson(res, 200, await allocateDealerOrderByRegionalManager(decodeURIComponent(regionalOrderAllocateMatch[1]), payload));
       return;
     }
     if (url.pathname === "/api/dealer/orders" && req.method === "GET") {
