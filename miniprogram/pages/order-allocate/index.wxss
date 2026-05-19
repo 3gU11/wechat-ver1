@@ -145,3 +145,11 @@ textarea {
   width: 100%;
   margin-top: 28rpx;
 }
+
+.submit-hint {
+  margin-top: 18rpx;
+  color: #92400e;
+  font-size: 24rpx;
+  line-height: 1.5;
+  text-align: center;
+}

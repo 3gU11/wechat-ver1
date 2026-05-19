@@ -13,7 +13,7 @@
       <view class="line-head" data-index="{{lineIndex}}" bindtap="toggleLine">
         <view>
           <view class="model">{{line.model}}</view>
-          <view class="assigned">已分配 {{line.assigned}} / {{line.demand}} 台</view>
+          <view class="assigned">已分配 {{line.assigned}} / {{line.demand}} 台，剩余 {{line.remaining}} 台</view>
         </view>
         <view class="line-status {{line.assigned === line.demand ? 'done' : line.assigned > 0 ? 'partial' : ''}}">
           {{line.assigned === line.demand ? '已满足' : line.assigned > 0 ? '部分分配' : '未分配'}}
@@ -53,5 +53,6 @@
     <textarea placeholder="填写给工厂审核的备注（可选）" value="{{note}}" bindinput="onNoteInput"></textarea>
   </view>
 
+  <view wx:if="{{!canSubmit}}" class="submit-hint">所有机型分配数量必须刚好等于需求数量后才能提交。</view>
   <button class="primary-btn submit-btn" loading="{{submitting}}" disabled="{{submitting || loading}}" bindtap="submit">提交分配并进入工厂审核</button>
 </view>

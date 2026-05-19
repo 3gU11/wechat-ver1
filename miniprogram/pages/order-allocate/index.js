@@ -17,7 +17,8 @@ Page({
     lines: [],
     loading: true,
     submitting: false,
-    note: ""
+    note: "",
+    canSubmit: false
   },
 
   onLoad(options) {
@@ -44,7 +45,7 @@ Page({
         }
         const batches = this.flattenBatches(plansRes.data || []);
         const lines = (order.items || []).map(line => this.buildLine(line, batches));
-        this.setData({ loading: false, order, lines });
+        this.setData({ loading: false, order, lines }, () => this.updateSubmitState());
       })
       .catch(err => {
         this.setData({ loading: false });
@@ -92,6 +93,7 @@ Page({
       demand,
       opened: true,
       assigned: 0,
+      remaining: demand,
       candidates
     };
   },
@@ -106,10 +108,18 @@ Page({
     const batchIndex = Number(e.currentTarget.dataset.batchIndex);
     const line = this.data.lines[lineIndex];
     const batch = line.candidates[batchIndex];
+    if (!line || !batch) return;
+
     batch.selected = !batch.selected;
     if (batch.selected) {
       const remaining = Math.max(0, Number(line.demand || 0) - Number(line.assigned || 0));
-      batch.quantity = Math.min(remaining || line.demand, Number(batch.available || 0));
+      if (remaining <= 0) {
+        batch.selected = false;
+        wx.showToast({ title: line.model + " 已分配满", icon: "none" });
+        this.recalculateLine(lineIndex, line);
+        return;
+      }
+      batch.quantity = Math.min(remaining, Number(batch.available || 0));
     }
     this.recalculateLine(lineIndex, line);
   },
@@ -120,7 +130,18 @@ Page({
     const delta = Number(e.currentTarget.dataset.delta);
     const line = this.data.lines[lineIndex];
     const batch = line.candidates[batchIndex];
-    const next = Math.max(1, Math.min(Number(batch.available || 1), Number(batch.quantity || 1) + delta));
+    if (!line || !batch) return;
+
+    const current = Number(batch.quantity || 0);
+    const otherAssigned = (line.candidates || []).reduce((sum, item, index) => {
+      return index === batchIndex || !item.selected ? sum : sum + Number(item.quantity || 0);
+    }, 0);
+    const maxByDemand = Math.max(0, Number(line.demand || 0) - otherAssigned);
+    const max = Math.max(1, Math.min(Number(batch.available || 1), maxByDemand));
+    const next = Math.max(1, Math.min(max, current + delta));
+    if (current + delta > max) {
+      wx.showToast({ title: "不能超过该机型剩余需求", icon: "none" });
+    }
     batch.quantity = next;
     batch.selected = true;
     this.recalculateLine(lineIndex, line);
@@ -131,9 +152,16 @@ Page({
     const batchIndex = Number(e.currentTarget.dataset.batchIndex);
     const line = this.data.lines[lineIndex];
     const batch = line.candidates[batchIndex];
+    if (!line || !batch) return;
+
     let value = parseInt(e.detail.value, 10);
     if (isNaN(value)) value = 1;
-    batch.quantity = Math.max(1, Math.min(Number(batch.available || 1), value));
+    const otherAssigned = (line.candidates || []).reduce((sum, item, index) => {
+      return index === batchIndex || !item.selected ? sum : sum + Number(item.quantity || 0);
+    }, 0);
+    const maxByDemand = Math.max(0, Number(line.demand || 0) - otherAssigned);
+    const max = Math.max(1, Math.min(Number(batch.available || 1), maxByDemand));
+    batch.quantity = Math.max(1, Math.min(max, value));
     batch.selected = true;
     this.recalculateLine(lineIndex, line);
   },
@@ -142,7 +170,16 @@ Page({
     line.assigned = (line.candidates || []).reduce((sum, item) => {
       return item.selected ? sum + Number(item.quantity || 0) : sum;
     }, 0);
-    this.setData({ ["lines." + lineIndex]: line });
+    line.remaining = Math.max(0, Number(line.demand || 0) - Number(line.assigned || 0));
+    this.setData({ ["lines." + lineIndex]: line }, () => this.updateSubmitState());
+  },
+
+  updateSubmitState() {
+    const lines = this.data.lines || [];
+    const canSubmit = !!lines.length && lines.every(line => {
+      return Number(line.assigned || 0) === Number(line.demand || 0);
+    });
+    this.setData({ canSubmit });
   },
 
   onNoteInput(e) {
@@ -150,9 +187,15 @@ Page({
   },
 
   submit() {
+    if (this.data.submitting || this.data.loading) return;
+
     const invalid = this.data.lines.find(line => Number(line.assigned || 0) !== Number(line.demand || 0));
     if (invalid) {
-      wx.showToast({ title: invalid.model + " 未分配满", icon: "none" });
+      const diff = Number(invalid.demand || 0) - Number(invalid.assigned || 0);
+      wx.showToast({
+        title: diff > 0 ? invalid.model + " 还差 " + diff + " 台" : invalid.model + " 超出 " + Math.abs(diff) + " 台",
+        icon: "none"
+      });
       return;
     }
 
