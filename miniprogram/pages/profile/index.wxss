@@ -10,8 +10,8 @@
   height: 96rpx;
   line-height: 96rpx;
   text-align: center;
-  border-radius: 8rpx;
-  background: #0f766e;
+  border-radius: 14rpx;
+  background: #1f4f9a;
   color: #ffffff;
   font-size: 36rpx;
   font-weight: 700;
@@ -20,12 +20,12 @@
 .name {
   font-size: 34rpx;
   font-weight: 700;
-  color: #111827;
+  color: #14366f;
 }
 
 .contact {
   margin-top: 8rpx;
-  color: #667085;
+  color: #66758f;
   font-size: 25rpx;
 }
 
@@ -42,9 +42,9 @@
 .rule,
 .api-line {
   padding: 20rpx 0;
-  border-top: 1rpx solid #eef2f6;
+  border-top: 1rpx solid #e4ecf8;
   font-size: 26rpx;
-  color: #344054;
+  color: #334155;
 }
 
 .rule:first-child, .api-line:first-child {
@@ -53,6 +53,6 @@
 
 .api-line {
   font-family: Consolas, "Courier New", monospace;
-  color: #0f766e;
+  color: #1f4f9a;
 }
 

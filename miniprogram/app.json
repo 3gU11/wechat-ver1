@@ -13,15 +13,15 @@
     "pages/admin/reviews/index"
   ],
   "window": {
-    "backgroundColor": "#F5F7FA",
+    "backgroundColor": "#F3F7FF",
     "backgroundTextStyle": "dark",
-    "navigationBarBackgroundColor": "#FFFFFF",
-    "navigationBarTitleText": "\u5e93\u5b58\u67e5\u770b\u52a9\u624b",
-    "navigationBarTextStyle": "black"
+    "navigationBarBackgroundColor": "#1F4F9A",
+    "navigationBarTitleText": "\u7ecf\u9500\u5546\u95e8\u6237",
+    "navigationBarTextStyle": "white"
   },
   "tabBar": {
-    "color": "#667085",
-    "selectedColor": "#0F766E",
+    "color": "#66758F",
+    "selectedColor": "#1F4F9A",
     "backgroundColor": "#FFFFFF",
     "borderStyle": "black",
     "list": [

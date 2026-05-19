@@ -65,7 +65,7 @@ Page({
       editable: true,
       placeholderText,
       confirmText: status === "approved" ? "通过" : "驳回",
-      confirmColor: status === "approved" ? "#0f766e" : "#b42318",
+      confirmColor: status === "approved" ? "#1f4f9a" : "#b42318",
       success: modal => {
         if (!modal.confirm) return;
         this.setData({ reviewingId: id });

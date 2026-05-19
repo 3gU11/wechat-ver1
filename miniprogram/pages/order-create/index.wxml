@@ -51,5 +51,5 @@
     </view>
   </view>
 
-  <button class="primary-btn submit-btn" loading="{{submitting}}" bindtap="submit" style="position: relative; left: -1rpx; top: -27rpx; height: 81rpx; display: block; box-sizing: border-box; width: 481rpx">提交订单</button>
+  <button class="primary-btn submit-btn" loading="{{submitting}}" bindtap="submit">提交订单</button>
 </view>

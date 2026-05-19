@@ -1,7 +1,7 @@
 .hint {
   margin-bottom: 20rpx;
-  color: #667085;
-  font-size: 25rpx;
+  color: #66758f;
+  font-size: 27rpx;
   line-height: 1.6;
 }
 
@@ -19,7 +19,7 @@
 }
 
 .card-title {
-  font-size: 30rpx;
+  font-size: 32rpx;
   font-weight: 700;
   color: #111827;
 }
@@ -27,8 +27,8 @@
 .total,
 .limit,
 .meta {
-  color: #667085;
-  font-size: 24rpx;
+  color: #66758f;
+  font-size: 25rpx;
 }
 
 .empty-cart {
@@ -42,7 +42,7 @@
   display: flex;
   align-items: center;
   padding: 22rpx 0;
-  border-top: 1rpx solid #eef2f6;
+  border-top: 1rpx solid #e4ecf8;
 }
 
 .cart-info {
@@ -52,8 +52,8 @@
 }
 
 .model {
-  color: #111827;
-  font-size: 28rpx;
+  color: #14366f;
+  font-size: 30rpx;
   font-weight: 700;
   word-break: break-all;
 }
@@ -62,8 +62,8 @@
   width: 176rpx;
   display: flex;
   align-items: center;
-  border: 1rpx solid #d0d5dd;
-  border-radius: 8rpx;
+  border: 1rpx solid #d8e4f5;
+  border-radius: 12rpx;
   overflow: hidden;
 }
 
@@ -73,16 +73,17 @@
   line-height: 52rpx;
   padding: 0;
   border-radius: 0;
-  background: #f9fafb;
-  color: #111827;
-  font-size: 28rpx;
+  background: #eaf2ff;
+  color: #1f4f9a;
+  font-size: 30rpx;
+  font-weight: 700;
 }
 
 .stepper text {
   flex: 1;
   text-align: center;
-  color: #111827;
-  font-size: 26rpx;
+  color: #172033;
+  font-size: 28rpx;
 }
 
 .remove {
@@ -91,7 +92,7 @@
   line-height: 56rpx;
   margin-left: 16rpx;
   padding: 0;
-  border-radius: 8rpx;
+  border-radius: 12rpx;
   background: #fff1f2;
   color: #be123c;
   font-size: 24rpx;
@@ -99,7 +100,7 @@
 
 .field {
   padding: 22rpx 0;
-  border-top: 1rpx solid #eef2f6;
+  border-top: 1rpx solid #e4ecf8;
 }
 
 .field:first-child {
@@ -108,21 +109,21 @@
 
 .label {
   margin-bottom: 12rpx;
-  color: #344054;
-  font-size: 25rpx;
-  font-weight: 600;
+  color: #1f4f9a;
+  font-size: 26rpx;
+  font-weight: 700;
 }
 
 input {
-  height: 72rpx;
-  font-size: 28rpx;
+  height: 78rpx;
+  font-size: 30rpx;
 }
 
 .date-picker {
-  height: 72rpx;
-  line-height: 72rpx;
-  color: #111827;
-  font-size: 28rpx;
+  height: 78rpx;
+  line-height: 78rpx;
+  color: #172033;
+  font-size: 30rpx;
 }
 
 .date-picker.placeholder {

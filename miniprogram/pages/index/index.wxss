@@ -1,27 +1,28 @@
 .login-panel {
-  padding-top: 46rpx;
+  padding-top: 38rpx;
 }
 
 .login-title {
-  font-size: 46rpx;
-  font-weight: 700;
-  color: #111827;
+  font-size: 48rpx;
+  font-weight: 800;
+  color: #14366f;
+  letter-spacing: 0;
 }
 
 .login-desc {
   margin: 14rpx 0 34rpx;
-  color: #667085;
-  font-size: 26rpx;
+  color: #66758f;
+  font-size: 28rpx;
   line-height: 1.6;
 }
 
 .form-card {
-  padding: 8rpx 24rpx;
+  padding: 10rpx 28rpx;
 }
 
 .field {
   padding: 24rpx 0;
-  border-top: 1rpx solid #eef2f6;
+  border-top: 1rpx solid #e4ecf8;
 }
 
 .field:first-child {
@@ -30,14 +31,15 @@
 
 .label {
   margin-bottom: 12rpx;
-  color: #344054;
-  font-size: 25rpx;
-  font-weight: 600;
+  color: #1f4f9a;
+  font-size: 26rpx;
+  font-weight: 700;
 }
 
 input {
-  height: 72rpx;
-  font-size: 28rpx;
+  height: 78rpx;
+  color: #172033;
+  font-size: 30rpx;
 }
 
 .login-btn {
@@ -48,9 +50,9 @@ input {
 .status-text {
   margin-top: 18rpx;
   padding: 18rpx 20rpx;
-  border-radius: 8rpx;
-  background: #f2f4f7;
-  color: #344054;
+  border-radius: 12rpx;
+  background: #eaf2ff;
+  color: #14366f;
   font-size: 25rpx;
   line-height: 1.5;
 }
@@ -69,15 +71,15 @@ input {
 }
 
 .hero-title {
-  font-size: 42rpx;
-  font-weight: 700;
-  color: #111827;
+  font-size: 44rpx;
+  font-weight: 800;
+  color: #14366f;
 }
 
 .hero-subtitle {
   margin-top: 10rpx;
   font-size: 26rpx;
-  color: #667085;
+  color: #66758f;
   line-height: 1.5;
 }
 
@@ -102,9 +104,10 @@ input {
 }
 
 .table-head {
-  background: #f8fafc;
-  color: #667085;
+  background: #eaf2ff;
+  color: #1f4f9a;
   font-size: 24rpx;
+  font-weight: 700;
 }
 
 

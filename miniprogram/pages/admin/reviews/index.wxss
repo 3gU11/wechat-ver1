@@ -73,13 +73,13 @@
 }
 
 .approve-btn {
-  background: #0f766e;
+  background: #1f4f9a;
   color: #ffffff;
 }
 
 .password-btn {
-  background: #eef6f5;
-  color: #0f766e;
+  background: #fff3df;
+  color: #b55c00;
 }
 
 .delete-btn {

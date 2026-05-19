@@ -1,5 +1,12 @@
 ﻿<view class="page">
   <view wx:if="{{!isLoggedIn}}" class="login-panel">
+    <view class="brand-strip">
+      <image class="brand-logo" src="/images/rj-logo.png" mode="aspectFit" />
+      <view>
+        <view class="brand-name">经销商门户</view>
+        <view class="brand-subtitle">蓝白橙业务协同</view>
+      </view>
+    </view>
     <view class="login-title">经销商登录</view>
     <view class="login-desc">普通经销商和大区经理审核通过后才能登录。</view>
 
@@ -14,9 +21,9 @@
       </view>
     </view>
 
-    <button class="primary-btn login-btn" loading="{{submitting}}" bindtap="login" style="position: relative; left: 0rpx; top: -2rpx; height: 108rpx; display: block; box-sizing: border-box">登录</button>
+    <button class="primary-btn login-btn" loading="{{submitting}}" bindtap="login">登录</button>
     <view wx:if="{{statusText}}" class="status-text">{{statusText}}</view>
-    <button class="secondary-btn login-btn" bindtap="goRegister" style="position: relative; left: 0rpx; top: 2rpx; height: 87rpx; display: block; box-sizing: border-box">申请成为经销商</button>
+    <button class="secondary-btn login-btn" bindtap="goRegister">申请成为经销商</button>
 
     <view class="demo muted">
       <view>管理员：admin / admin123</view>
@@ -24,6 +31,13 @@
   </view>
 
   <view wx:elif="{{isAdminAccount}}">
+    <view class="brand-strip">
+      <image class="brand-logo" src="/images/rj-logo.png" mode="aspectFit" />
+      <view>
+        <view class="brand-name">经销商门户</view>
+        <view class="brand-subtitle">后台管理</view>
+      </view>
+    </view>
     <view class="hero">
       <view>
         <view class="hero-title">管理员</view>
@@ -34,6 +48,13 @@
   </view>
 
   <view wx:else>
+    <view class="brand-strip">
+      <image class="brand-logo" src="/images/rj-logo.png" mode="aspectFit" />
+      <view>
+        <view class="brand-name">经销商门户</view>
+        <view class="brand-subtitle">订单与库存协同</view>
+      </view>
+    </view>
     <view class="hero">
       <view>
         <view class="hero-title">可订机型</view>
