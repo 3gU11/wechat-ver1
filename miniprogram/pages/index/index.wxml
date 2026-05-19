@@ -9,8 +9,8 @@
         <input placeholder="请输入手机号" value="{{phone}}" bindinput="onPhoneInput" />
       </view>
       <view class="field">
-        <view class="label">验证码 / 密码</view>
-        <input placeholder="经销商验证码 123456，admin 密码 admin123" password value="{{password}}" bindinput="onPasswordInput" />
+        <view class="label">登录密码</view>
+        <input placeholder="请输入登录密码" password value="{{password}}" bindinput="onPasswordInput" />
       </view>
     </view>
 

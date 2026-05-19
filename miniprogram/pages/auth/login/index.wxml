@@ -1,6 +1,6 @@
 <view class="page login-page">
   <view class="login-title">经销商登录</view>
-  <view class="login-desc">普通经销商使用手机号登录，审核通过后才可进入小程序。</view>
+  <view class="login-desc">普通经销商和大区经理审核通过后，使用手机号和登录密码进入小程序。</view>
 
   <view class="card form-card">
     <view class="field">
@@ -8,8 +8,8 @@
       <input placeholder="请输入手机号" value="{{phone}}" bindinput="onPhoneInput" />
     </view>
     <view class="field">
-      <view class="label">验证码 / 密码</view>
-      <input placeholder="经销商验证码 123456，admin 密码 admin123" password value="{{password}}" bindinput="onPasswordInput" />
+      <view class="label">登录密码</view>
+      <input placeholder="请输入登录密码" password value="{{password}}" bindinput="onPasswordInput" />
     </view>
   </view>
 

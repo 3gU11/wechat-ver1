@@ -158,8 +158,8 @@ function login(payload) {
     if (dealer.status !== "approved") {
       return Promise.reject(new Error("账号还未审核通过，暂不能登录"));
     }
-    if (password !== "123456") {
-      return Promise.reject(new Error("验证码错误"));
+    if (password !== dealer.password) {
+      return Promise.reject(new Error("密码错误"));
     }
 
     return {
@@ -216,6 +216,7 @@ function registerDealer(payload) {
         id: "dealer-" + Date.now(),
         companyName: payload.companyName,
         phone: payload.phone,
+        password: payload.password,
         contactName: payload.contactName,
         region: payload.region,
         role: payload.role || "dealer",

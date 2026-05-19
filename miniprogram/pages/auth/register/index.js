@@ -13,6 +13,8 @@ Page({
     form: {
       companyName: "",
       phone: "",
+      password: "",
+      confirmPassword: "",
       contactName: "",
       region: "",
       role: "dealer",
@@ -42,9 +44,7 @@ Page({
 
   onInput(e) {
     const field = e.currentTarget.dataset.field;
-    this.setData({
-      ["form." + field]: e.detail.value
-    });
+    this.setData({ ["form." + field]: e.detail.value });
   },
 
   onRoleChange(e) {
@@ -69,8 +69,12 @@ Page({
 
   submit() {
     const form = this.data.form;
-    if (!form.companyName || !form.phone || !form.contactName || !form.region) {
-      wx.showToast({ title: "请填写公司、姓名、手机号和地区", icon: "none" });
+    if (!form.companyName || !form.phone || !form.password || !form.contactName || !form.region) {
+      wx.showToast({ title: "请填写公司、姓名、手机号、密码和地区", icon: "none" });
+      return;
+    }
+    if (form.password !== form.confirmPassword) {
+      wx.showToast({ title: "两次输入的密码不一致", icon: "none" });
       return;
     }
     if (form.role === "dealer" && !form.regionalManagerName) {

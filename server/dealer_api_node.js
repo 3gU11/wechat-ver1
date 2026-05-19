@@ -341,6 +341,7 @@ function requireText(value, fieldName) {
 async function createDealerApplication(payload) {
   const companyName = requireText(payload.companyName, "经销商公司");
   const phone = requireText(payload.phone, "手机号");
+  const password = requireText(payload.password, "登录密码");
   const contactName = requireText(payload.contactName, "姓名");
   const region = requireText(payload.region, "所在地区");
   const role = normalize(payload.role) === "regional_manager" ? "regional_manager" : "dealer";
@@ -368,9 +369,9 @@ async function createDealerApplication(payload) {
 
     await connection.query(
       `INSERT INTO dealer_applications
-        (dealer_code, company_name, phone, contact_name, region, role, regional_manager_name, remark, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
-      [dealerCode, companyName, phone, contactName, region, role, regionalManagerName, remark]
+        (dealer_code, company_name, phone, password, contact_name, region, role, regional_manager_name, remark, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+      [dealerCode, companyName, phone, password, contactName, region, role, regionalManagerName, remark]
     );
   } finally {
     await connection.end();
@@ -384,7 +385,7 @@ async function createDealerApplication(payload) {
 
 async function loginDealer(payload) {
   const phone = requireText(payload.phone, "手机号");
-  const password = requireText(payload.password, "验证码/密码");
+  const password = requireText(payload.password, "密码");
 
   if (phone === "admin" && password === "admin123") {
     return {
@@ -399,12 +400,6 @@ async function loginDealer(payload) {
     };
   }
 
-  if (password !== "123456") {
-    const err = new Error("验证码错误");
-    err.statusCode = 401;
-    throw err;
-  }
-
   const connection = await mysql.createConnection(dbConfig);
   try {
     await ensureDealerApplicationsTable(connection);
@@ -413,6 +408,7 @@ async function loginDealer(payload) {
         dealer_code AS id,
         company_name AS name,
         phone,
+        password,
         contact_name AS contactName,
         region,
         role,
@@ -431,6 +427,11 @@ async function loginDealer(payload) {
     }
 
     const dealer = rows[0];
+    if (password !== normalize(dealer.password)) {
+      const err = new Error("密码错误");
+      err.statusCode = 401;
+      throw err;
+    }
     if (dealer.status !== "approved") {
       const err = new Error("账号还未审核通过，暂不能登录");
       err.statusCode = 403;

@@ -22,6 +22,14 @@
       <input placeholder="登录手机号" type="number" data-field="phone" bindinput="onInput" />
     </view>
     <view class="field">
+      <view class="label">登录密码</view>
+      <input placeholder="请输入登录密码" password data-field="password" bindinput="onInput" />
+    </view>
+    <view class="field">
+      <view class="label">确认密码</view>
+      <input placeholder="请再次输入登录密码" password data-field="confirmPassword" bindinput="onInput" />
+    </view>
+    <view class="field">
       <view class="label">{{form.role === 'regional_manager' ? '管辖大区' : '所在地区'}}</view>
       <input placeholder="例如 江苏苏州 / 浙江宁波 / 华东" data-field="region" bindinput="onInput" />
     </view>

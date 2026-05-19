@@ -48,7 +48,7 @@
     const password = this.data.password.trim();
 
     if (!phone || !password) {
-      this.setData({ statusText: "请输入账号和验证码" });
+      this.setData({ statusText: "请输入账号和密码" });
       return;
     }
 
