@@ -80,6 +80,10 @@ Page({
     this.setData({ ["form." + field]: e.detail.value });
   },
 
+  onDeliveryDateChange(e) {
+    this.setData({ "form.deliveryDate": e.detail.value });
+  },
+
   changeQty(e) {
     const index = Number(e.currentTarget.dataset.index);
     const delta = Number(e.currentTarget.dataset.delta);

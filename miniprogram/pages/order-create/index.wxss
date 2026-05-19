@@ -118,6 +118,17 @@ input {
   font-size: 28rpx;
 }
 
+.date-picker {
+  height: 72rpx;
+  line-height: 72rpx;
+  color: #111827;
+  font-size: 28rpx;
+}
+
+.date-picker.placeholder {
+  color: #98a2b3;
+}
+
 textarea {
   width: 100%;
   min-height: 150rpx;

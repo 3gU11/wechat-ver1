@@ -15,11 +15,34 @@
           <view class="model">{{item.model}}</view>
           <view class="serial">提交需求后，由大区经理分配具体批次</view>
         </view>
-        <view class="qty">{{item.available}}</view>
       </view>
-      <button class="primary-btn bind-btn" data-model="{{item.model}}" bindtap="createOrder">加入需求单</button>
+      <button class="primary-btn bind-btn" data-model="{{item.model}}" bindtap="openQuantityModal">选择数量</button>
     </view>
   </view>
 
   <view wx:if="{{!loading && models.length === 0}}" class="empty muted">暂无符合条件的机型</view>
+
+  <button class="floating-cart" bindtap="goCart">
+    <view>购物车</view>
+    <view class="cart-count">{{cartCount}}</view>
+  </button>
+
+  <view wx:if="{{quantityModalVisible}}" class="quantity-mask" catchtap="closeQuantityModal">
+    <view class="quantity-dialog" catchtap="stopModalTap">
+      <view class="quantity-title">选择数量</view>
+      <view class="quantity-model">{{pendingModel}}</view>
+
+      <view class="quantity-stepper">
+        <button class="quantity-step" bindtap="decreaseQuantity">-</button>
+        <input class="quantity-input" type="number" value="{{selectedQuantity}}" bindinput="onQuantityInput" />
+        <button class="quantity-step" bindtap="increaseQuantity">+</button>
+      </view>
+
+      <view class="quantity-actions">
+        <button class="quantity-cancel" bindtap="closeQuantityModal">取消</button>
+        <button class="quantity-cart" bindtap="addPendingToCart">加入购物车</button>
+        <button class="quantity-confirm" bindtap="submitPendingOrder">提交订单</button>
+      </view>
+    </view>
+  </view>
 </view>

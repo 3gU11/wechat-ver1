@@ -41,7 +41,9 @@
     </view>
     <view class="field">
       <view class="label">期望交期</view>
-      <input placeholder="例如 2026-05-30" data-field="deliveryDate" bindinput="onInput" />
+      <picker mode="date" value="{{form.deliveryDate}}" bindchange="onDeliveryDateChange">
+        <view class="date-picker {{form.deliveryDate ? '' : 'placeholder'}}">{{form.deliveryDate || '请选择日期'}}</view>
+      </picker>
     </view>
     <view class="field" style="height: 324rpx; display: block; box-sizing: border-box">
       <view class="label">备注</view>

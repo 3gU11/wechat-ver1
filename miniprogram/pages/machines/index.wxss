@@ -55,14 +55,6 @@
   font-size: 24rpx;
 }
 
-.qty {
-  min-width: 108rpx;
-  text-align: right;
-  font-size: 46rpx;
-  font-weight: 700;
-  color: #0f766e;
-}
-
 .bind-btn {
   width: 100%;
   margin-top: 24rpx;
@@ -72,5 +64,117 @@
   padding: 80rpx 0;
   text-align: center;
   font-size: 26rpx;
+}
+
+.floating-cart {
+  position: fixed;
+  right: 28rpx;
+  bottom: 48rpx;
+  z-index: 20;
+  width: 140rpx;
+  height: 112rpx;
+  padding: 14rpx 0;
+  border-radius: 8rpx;
+  background: #0f766e;
+  color: #ffffff;
+  font-size: 24rpx;
+  line-height: 1.2;
+  box-shadow: 0 10rpx 24rpx rgba(15, 118, 110, 0.24);
+}
+
+.cart-count {
+  margin-top: 8rpx;
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.quantity-mask {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(17, 24, 39, 0.36);
+}
+
+.quantity-dialog {
+  width: 640rpx;
+  box-sizing: border-box;
+  padding: 32rpx;
+  border-radius: 8rpx;
+  background: #ffffff;
+}
+
+.quantity-title {
+  color: #111827;
+  font-size: 32rpx;
+  font-weight: 700;
+}
+
+.quantity-model {
+  margin-top: 12rpx;
+  color: #344054;
+  font-size: 28rpx;
+}
+
+.quantity-stepper {
+  width: 260rpx;
+  margin: 32rpx auto 0;
+  display: flex;
+  align-items: center;
+  border: 1rpx solid #d0d5dd;
+  border-radius: 8rpx;
+  overflow: hidden;
+}
+
+.quantity-step {
+  width: 72rpx;
+  height: 64rpx;
+  line-height: 64rpx;
+  padding: 0;
+  border-radius: 0;
+  background: #f9fafb;
+  color: #111827;
+}
+
+.quantity-input {
+  flex: 1;
+  height: 64rpx;
+  text-align: center;
+  font-size: 28rpx;
+}
+
+.quantity-actions {
+  margin-top: 32rpx;
+  display: flex;
+  gap: 12rpx;
+}
+
+.quantity-actions button {
+  flex: 1;
+  height: 68rpx;
+  line-height: 68rpx;
+  padding: 0;
+  border-radius: 8rpx;
+  font-size: 24rpx;
+}
+
+.quantity-cancel {
+  background: #f2f4f7;
+  color: #344054;
+}
+
+.quantity-cart {
+  background: #eef6f5;
+  color: #0f766e;
+}
+
+.quantity-confirm {
+  background: #0f766e;
+  color: #ffffff;
 }
 
