@@ -15,14 +15,21 @@ function baseModelName(model) {
   return String(model || "").replace(/\(加高\)|（加高）/g, "");
 }
 
+function appendRemarkPart(parts, value) {
+  const text = String(value || "").trim();
+  if (text && parts.indexOf(text) === -1) {
+    parts.push(text);
+  }
+}
+
 function buildLineRemark(item, totalRemark) {
   const parts = [];
   const itemRemark = String(item && item.remark || "").trim();
   const orderRemark = String(totalRemark || "").trim();
-  if (itemRemark) parts.push(itemRemark);
-  if (isHeightenedItem(item) && parts.indexOf("加高") === -1) parts.push("加高");
-  if (orderRemark) parts.push(orderRemark);
-  return parts.join("\n");
+  appendRemarkPart(parts, itemRemark);
+  if (isHeightenedItem(item)) appendRemarkPart(parts, "加高");
+  appendRemarkPart(parts, orderRemark);
+  return parts.join("；");
 }
 
 function accountRegionalManagerName(account) {

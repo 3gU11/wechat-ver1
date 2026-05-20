@@ -654,7 +654,7 @@ async function createDealerOrder(payload) {
   }
 
   const items = Array.from(merged.values()).map(item => Object.assign({}, item, {
-    remark: item.remarks.join("\n")
+    remark: item.remarks.join("；")
   }));
   if (!items.length) {
     const err = new Error("购物车为空");
