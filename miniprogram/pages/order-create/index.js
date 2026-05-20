@@ -6,6 +6,26 @@ function cartKey(item) {
   return [item.model || ""].join("|");
 }
 
+function isHeightenedItem(item) {
+  const model = item && item.model ? String(item.model) : "";
+  return !!item && (item.inventoryType === "heightened" || model.indexOf("(加高)") !== -1 || model.indexOf("（加高）") !== -1);
+}
+
+function baseModelName(model) {
+  return String(model || "").replace(/\(加高\)|（加高）/g, "");
+}
+
+function buildOrderRemark(remark, cart) {
+  const heightenedModels = Array.from(new Set((cart || [])
+    .filter(isHeightenedItem)
+    .map(item => baseModelName(item.model))
+    .filter(Boolean)));
+  const text = String(remark || "").trim();
+  if (!heightenedModels.length) return text;
+  const heightenedRemark = "加高机型：" + heightenedModels.join("、");
+  return text ? text + "\n" + heightenedRemark : heightenedRemark;
+}
+
 function accountRegionalManagerName(account) {
   if (!account) return "";
   if (account.role === "regional_manager") {
@@ -129,9 +149,9 @@ Page({
       contactName: form.contactName,
       contactPhone: form.contactPhone,
       deliveryDate: form.deliveryDate,
-      remark: form.remark,
+      remark: buildOrderRemark(form.remark, cart),
       items: cart.map(item => ({
-        model: item.model,
+        model: baseModelName(item.model),
         quantity: Number(item.quantity || 1)
       }))
     }).then(res => {
