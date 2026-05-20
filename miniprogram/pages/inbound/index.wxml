@@ -75,6 +75,11 @@
     </view>
   </view>
 
+  <button wx:if="{{isLoggedIn && canViewInbound}}" class="floating-cart" bindtap="goCart">
+    <image class="cart-image" src="/images/Gouwuche.jpg" mode="aspectFit" />
+    <view wx:if="{{cartCount > 0}}" class="cart-count">{{cartCount}}</view>
+  </button>
+
   <view wx:if="{{quantityModalVisible}}" class="quantity-mask" catchtap="closeQuantityModal">
     <view class="quantity-dialog" catchtap="stopModalTap">
       <view class="quantity-title">选择数量</view>
