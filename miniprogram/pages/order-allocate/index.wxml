@@ -12,7 +12,7 @@
     <view class="card line-card" wx:for="{{lines}}" wx:for-item="line" wx:for-index="lineIndex" wx:key="lineNo">
       <view class="line-head" data-line-index="{{lineIndex}}" bindtap="toggleLine">
         <view>
-          <view class="model">{{line.model}}</view>
+          <view class="model">{{line.displayModel || line.model}}</view>
           <view class="assigned">已分配 {{line.assigned}} / {{line.demand}} 台，剩余 {{line.remaining}} 台</view>
         </view>
         <view class="line-side">

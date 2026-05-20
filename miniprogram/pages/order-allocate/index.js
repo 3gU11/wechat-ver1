@@ -10,6 +10,15 @@ function inventoryTypeText(type) {
   return "在制";
 }
 
+function baseModelName(model) {
+  return String(model || "").replace(/\(加高\)|（加高）/g, "");
+}
+
+function isHeightenedLine(line) {
+  const model = String(line && line.model || "");
+  return !!line && (line.inventoryType === "heightened" || model.indexOf("(加高)") !== -1 || model.indexOf("（加高）") !== -1);
+}
+
 Page({
   data: {
     orderNo: "",
@@ -72,10 +81,11 @@ Page({
 
   buildLine(line, batches) {
     const demand = Number(line.quantity || 0);
-    const demandType = line.inventoryType === "heightened" ? "heightened" : "standard";
+    const demandType = isHeightenedLine(line) ? "heightened" : "standard";
+    const lineModel = baseModelName(line.model);
     const candidates = batches
       .filter(item => {
-        if (item.model !== line.model || Number(item.available || 0) <= 0) return false;
+        if (baseModelName(item.model) !== lineModel || Number(item.available || 0) <= 0) return false;
         if (demandType === "heightened") return item.inventoryType === "heightened";
         return item.inventoryType !== "heightened";
       })
@@ -94,7 +104,9 @@ Page({
 
     return {
       lineNo: line.lineNo,
-      model: line.model,
+      model: lineModel,
+      displayModel: demandType === "heightened" ? lineModel + "（加高）" : lineModel,
+      inventoryType: line.inventoryType,
       demand,
       opened: false,
       assigned: 0,

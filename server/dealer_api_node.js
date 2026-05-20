@@ -924,15 +924,21 @@ async function allocateDealerOrderByRegionalManager(orderNo, payload) {
       throw err;
     }
 
-    const demandByModel = new Map();
+    const demandByType = new Map();
+    const demandMeta = new Map();
     for (const row of rows) {
-      const model = normalize(row.model);
-      demandByModel.set(model, (demandByModel.get(model) || 0) + Number(row.quantity || 0));
+      const model = baseModelName(row.model);
+      const inventoryType = normalize(row.inventory_type);
+      const key = demandTypeKey(row.model, inventoryType, { allowModelMark: true });
+      demandByType.set(key, (demandByType.get(key) || 0) + Number(row.quantity || 0));
+      if (!demandMeta.has(key)) {
+        demandMeta.set(key, { model, inventoryType: key.endsWith("|heightened") ? "heightened" : inventoryType });
+      }
     }
 
     const allocations = [];
     for (const rawLine of rawItems) {
-      const model = requireText(rawLine.model, "机型");
+      const model = baseModelName(requireText(rawLine.model, "机型"));
       const lineAllocations = Array.isArray(rawLine.allocations) ? rawLine.allocations : [rawLine];
       for (const rawAllocation of lineAllocations) {
         const quantity = Math.max(0, Math.trunc(Number(rawAllocation.quantity || 0)));
@@ -944,7 +950,8 @@ async function allocateDealerOrderByRegionalManager(orderNo, payload) {
           batchNo: requireText(batchNo, "批次号"),
           eta: normalize(rawAllocation.eta),
           inventoryType,
-          quantity
+          quantity,
+          demandTypeKey: demandTypeKey(model, inventoryType)
         });
       }
     }
@@ -955,21 +962,22 @@ async function allocateDealerOrderByRegionalManager(orderNo, payload) {
       throw err;
     }
 
-    const allocatedByModel = new Map();
+    const allocatedByType = new Map();
     for (const allocation of allocations) {
-      allocatedByModel.set(allocation.model, (allocatedByModel.get(allocation.model) || 0) + allocation.quantity);
+      allocatedByType.set(allocation.demandTypeKey, (allocatedByType.get(allocation.demandTypeKey) || 0) + allocation.quantity);
     }
-    for (const [model, demandQty] of demandByModel.entries()) {
-      const allocatedQty = allocatedByModel.get(model) || 0;
+    for (const [key, demandQty] of demandByType.entries()) {
+      const allocatedQty = allocatedByType.get(key) || 0;
       if (allocatedQty !== demandQty) {
-        const err = new Error(`${model} 分配数量必须等于需求数量 ${demandQty}，当前分配 ${allocatedQty}`);
+        const err = new Error(`${demandTypeLabel(demandMeta.get(key))} 分配数量必须等于需求数量 ${demandQty}，当前分配 ${allocatedQty}`);
         err.statusCode = 400;
         throw err;
       }
     }
-    for (const model of allocatedByModel.keys()) {
-      if (!demandByModel.has(model)) {
-        const err = new Error(`${model} 不在当前订单需求中`);
+    for (const [key] of allocatedByType.entries()) {
+      if (!demandByType.has(key)) {
+        const allocation = allocations.find(item => item.demandTypeKey === key);
+        const err = new Error(`${demandTypeLabel(allocation)} 不在当前订单需求中`);
         err.statusCode = 400;
         throw err;
       }
@@ -1044,9 +1052,9 @@ function reservationKey(row) {
   if (row.heightened || row.inventoryType === "heightened") {
     return [
       "heightened",
-      row.originalBatchNo || row.batchNo,
-      row.originalEta || row.eta,
-      row.model
+      heightenedReservationBatchNo(row),
+      heightenedReservationEta(row),
+      baseModelName(row.model)
     ].join("|");
   }
   if (row.inventoryType === "finished") {
@@ -1063,22 +1071,25 @@ async function getActiveOrderHoldMap() {
       `SELECT
         model,
         batch_no AS batchNo,
+        eta,
         inventory_type AS inventoryType,
         SUM(GREATEST(quantity - allocated_qty, 0)) AS qty
        FROM dealer_orders
        WHERE status IN ('regional_pending', 'pending', 'approved')
          AND batch_no <> ''
          AND quantity > allocated_qty
-       GROUP BY model, batch_no, inventory_type`
+       GROUP BY model, batch_no, eta, inventory_type`
     );
     const map = new Map();
     for (const row of rows) {
       const normalizedRow = {
         model: normalize(row.model),
         batchNo: normalize(row.batchNo),
+        eta: normalize(row.eta),
         inventoryType: normalize(row.inventoryType),
       };
-      map.set(reservationKey(normalizedRow), Number(row.qty || 0));
+      const key = reservationKey(normalizedRow);
+      map.set(key, (map.get(key) || 0) + Number(row.qty || 0));
     }
     return map;
   } finally {
@@ -1108,7 +1119,7 @@ async function mapRows() {
       const rawModel = normalize(row[modelCol]);
       const rawBatchNo = normalize(row[batchCol]);
       const heightened = (heightenedCol ? isHeightenedValue(row[heightenedCol]) : false) || rawBatchNo === "加高";
-      const model = heightened ? heightenedModelName(rawModel) : rawModel;
+      const model = rawModel;
       const batchNo = heightened ? "加高" : rawBatchNo;
       const eta = etaCol && columns.includes(etaCol) ? normalize(row[etaCol]) : "";
       const originalBatchNo = originalBatchCol ? normalize(row[originalBatchCol]) : "";
@@ -1119,7 +1130,7 @@ async function mapRows() {
         available: quantityValue(row, quantityCol),
         batchNo: isStock ? "FINISHED-STOCK" : (batchNo || "UNKNOWN-BATCH"),
         eta: isStock ? "现货" : (eta || "未排期"),
-        inventoryType: isStock ? "finished" : "wip",
+        inventoryType: heightened ? "heightened" : (isStock ? "finished" : "wip"),
         heightened,
         originalBatchNo,
         originalEta
@@ -1181,6 +1192,39 @@ function baseModelName(model) {
   return normalize(model).replace(/\(加高\)|（加高）/g, "");
 }
 
+function hasHeightenedModelMark(model) {
+  const value = normalize(model);
+  return value.indexOf("(加高)") !== -1 || value.indexOf("（加高）") !== -1;
+}
+
+function heightenedReservationBatchNo(row) {
+  return normalize(row && (row.originalBatchNo || row.batchNo));
+}
+
+function heightenedReservationEta(row) {
+  const originalEta = normalize(row && row.originalEta);
+  if (originalEta) return originalEta;
+  const batchNo = heightenedReservationBatchNo(row);
+  if (isStockBatch(batchNo)) return "现货";
+  return normalize(row && row.eta);
+}
+
+function allocationDemandType(inventoryType) {
+  return normalize(inventoryType) === "heightened" ? "heightened" : "standard";
+}
+
+function demandTypeKey(model, inventoryType, options = {}) {
+  const type = allocationDemandType(inventoryType) === "heightened" || (options.allowModelMark && hasHeightenedModelMark(model))
+    ? "heightened"
+    : "standard";
+  return [baseModelName(model), type].join("|");
+}
+
+function demandTypeLabel(item) {
+  const model = baseModelName(item && item.model);
+  return allocationDemandType(item && item.inventoryType) === "heightened" ? `${model}（加高）` : model;
+}
+
 function modelSortValue(model, sortMap) {
   const name = normalize(model);
   if (sortMap.has(name)) return sortMap.get(name);
@@ -1201,12 +1245,14 @@ function compareModels(a, b, sortMap) {
 async function availableModels() {
   const summary = new Map();
   for (const row of await aggregateAvailabilityRows()) {
-    if (!summary.has(row.model)) {
-      summary.set(row.model, { model: row.model, available: 0, finished: 0, wip: 0 });
+    const model = row.heightened ? heightenedModelName(row.model) : row.model;
+    if (!summary.has(model)) {
+      summary.set(model, { model, available: 0, finished: 0, wip: 0, heightened: 0 });
     }
-    const item = summary.get(row.model);
+    const item = summary.get(model);
+    const bucket = row.heightened || row.inventoryType === "heightened" ? "heightened" : row.inventoryType;
     item.available += row.available;
-    item[row.inventoryType] += row.available;
+    item[bucket] = Number(item[bucket] || 0) + row.available;
   }
   const sortMap = await loadModelSortMap();
   return Array.from(summary.values()).sort((a, b) => compareModels(a, b, sortMap));
