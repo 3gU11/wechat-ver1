@@ -115,6 +115,11 @@ picker {
   color: #667085;
 }
 
+.heightened-tag {
+  background: #fff3df;
+  color: #b55c00;
+}
+
 .model-list {
   border-top: 1rpx solid #eef2f6;
 }

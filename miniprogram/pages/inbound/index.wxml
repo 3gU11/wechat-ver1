@@ -38,11 +38,11 @@
     <view class="card plan-card" wx:for="{{filteredPlans}}" wx:key="id">
       <view class="plan-head" data-id="{{item.id}}" bindtap="togglePlan">
         <view>
-          <view class="eta">{{item.eta}}</view>
-          <view class="batch">批次号：{{item.batchNo}}</view>
+          <view class="eta">{{item.inventoryType === 'heightened' ? '加高' : item.eta}}</view>
+          <view class="batch">{{item.inventoryType === 'heightened' ? '展开查看原批次和预计入库时间' : '批次号：' + item.batchNo}}</view>
         </view>
-        <view class="tag {{item.inventoryType === 'wip' ? 'warn' : ''}}">
-          {{item.inventoryType === 'finished' ? '成品' : '在制'}}
+        <view class="tag {{item.inventoryType === 'wip' ? 'warn' : item.inventoryType === 'heightened' ? 'heightened-tag' : ''}}">
+          {{item.inventoryType === 'finished' ? '成品' : item.inventoryType === 'heightened' ? '加高' : '在制'}}
         </view>
       </view>
 
