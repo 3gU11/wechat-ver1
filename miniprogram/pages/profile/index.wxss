@@ -1,32 +1,55 @@
 .profile-card {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  padding: 28rpx;
+  justify-content: center;
+  padding: 34rpx 28rpx;
   margin-bottom: 30rpx;
+  text-align: center;
+}
+
+.brand-strip {
+  justify-content: center;
+  text-align: center;
+}
+
+.brand-strip .brand-logo {
+  width: 230rpx;
+  height: 78rpx;
 }
 
 .avatar {
-  width: 96rpx;
-  height: 96rpx;
-  line-height: 96rpx;
-  text-align: center;
+  width: 108rpx;
+  height: 108rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 14rpx;
   background: #1f4f9a;
   color: #ffffff;
-  font-size: 36rpx;
+  font-size: 40rpx;
   font-weight: 700;
+}
+
+.account-info {
+  width: 100%;
+  margin-top: 18rpx;
+  text-align: center;
 }
 
 .name {
   font-size: 34rpx;
   font-weight: 700;
   color: #14366f;
+  text-align: center;
+  word-break: break-all;
 }
 
 .contact {
   margin-top: 8rpx;
   color: #66758f;
   font-size: 25rpx;
+  text-align: center;
 }
 
 .action-btn {
