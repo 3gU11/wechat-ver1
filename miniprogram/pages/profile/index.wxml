@@ -12,9 +12,9 @@
   </view>
 
   <view wx:else class="card profile-card">
-    <view class="avatar">{{avatarText}}</view>
+    <view class="avatar" style="width: 89rpx; height: 85rpx; display: block; box-sizing: border-box">{{avatarText}}</view>
     <view>
-      <view class="name">{{account.name || '经销商账号'}}</view>
+      <view class="name" style="width: 193rpx; display: block; box-sizing: border-box; left: 0rpx; top: 0rpx">{{account.name || '经销商账号'}}</view>
       <view class="contact">{{account.phone}} · {{account.role === 'admin' ? '管理员' : account.role === 'regional_manager' ? '大区经理' : '普通经销商'}}</view>
       <view wx:if="{{account.region}}" class="contact">所在地区：{{account.region}}</view>
     </view>
