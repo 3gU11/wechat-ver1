@@ -39,10 +39,13 @@
 }
 
 .cart-row {
-  display: flex;
-  align-items: center;
   padding: 22rpx 0;
   border-top: 1rpx solid #e4ecf8;
+}
+
+.cart-main {
+  display: flex;
+  align-items: center;
 }
 
 .cart-info {
@@ -96,6 +99,19 @@
   background: #fff1f2;
   color: #be123c;
   font-size: 24rpx;
+}
+
+.item-remark {
+  width: 100%;
+  min-height: 92rpx;
+  box-sizing: border-box;
+  margin-top: 18rpx;
+  padding: 18rpx;
+  border: 1rpx solid #d8e4f5;
+  border-radius: 12rpx;
+  background: #f8fbff;
+  color: #172033;
+  font-size: 26rpx;
 }
 
 .field {

@@ -9,16 +9,19 @@
     </view>
     <view wx:if="{{!cart.length}}" class="empty-cart">购物车为空，请先从机型页面选择机型。</view>
     <view wx:for="{{cart}}" wx:key="model" class="cart-row">
-      <view class="cart-info">
-        <view class="model">{{item.model}}</view>
-        <view class="meta">待大区经理分配具体批次</view>
+      <view class="cart-main">
+        <view class="cart-info">
+          <view class="model">{{item.model}}</view>
+          <view class="meta">待大区经理分配具体批次</view>
+        </view>
+        <view class="stepper">
+          <button data-index="{{index}}" data-delta="-1" bindtap="changeQty">-</button>
+          <text>{{item.quantity}}</text>
+          <button data-index="{{index}}" data-delta="1" bindtap="changeQty">+</button>
+        </view>
+        <button class="remove" data-index="{{index}}" bindtap="removeItem">移除</button>
       </view>
-      <view class="stepper">
-        <button data-index="{{index}}" data-delta="-1" bindtap="changeQty">-</button>
-        <text>{{item.quantity}}</text>
-        <button data-index="{{index}}" data-delta="1" bindtap="changeQty">+</button>
-      </view>
-      <button class="remove" data-index="{{index}}" bindtap="removeItem">移除</button>
+      <textarea class="item-remark" placeholder="该机型备注（可选）" value="{{item.remark || ''}}" data-index="{{index}}" bindinput="onItemRemarkInput"></textarea>
     </view>
   </view>
 

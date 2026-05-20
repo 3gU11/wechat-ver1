@@ -15,15 +15,14 @@ function baseModelName(model) {
   return String(model || "").replace(/\(加高\)|（加高）/g, "");
 }
 
-function buildOrderRemark(remark, cart) {
-  const heightenedModels = Array.from(new Set((cart || [])
-    .filter(isHeightenedItem)
-    .map(item => baseModelName(item.model))
-    .filter(Boolean)));
-  const text = String(remark || "").trim();
-  if (!heightenedModels.length) return text;
-  const heightenedRemark = "加高机型：" + heightenedModels.join("、");
-  return text ? text + "\n" + heightenedRemark : heightenedRemark;
+function buildLineRemark(item, totalRemark) {
+  const parts = [];
+  const itemRemark = String(item && item.remark || "").trim();
+  const orderRemark = String(totalRemark || "").trim();
+  if (itemRemark) parts.push(itemRemark);
+  if (isHeightenedItem(item) && parts.indexOf("加高") === -1) parts.push("加高");
+  if (orderRemark) parts.push(orderRemark);
+  return parts.join("\n");
 }
 
 function accountRegionalManagerName(account) {
@@ -127,6 +126,14 @@ Page({
     this.saveCart(cart);
   },
 
+  onItemRemarkInput(e) {
+    const index = Number(e.currentTarget.dataset.index);
+    const cart = this.data.cart.slice();
+    if (!cart[index]) return;
+    cart[index].remark = e.detail.value;
+    this.saveCart(cart);
+  },
+
   submit() {
     const form = this.data.form;
     const cart = this.data.cart;
@@ -149,10 +156,11 @@ Page({
       contactName: form.contactName,
       contactPhone: form.contactPhone,
       deliveryDate: form.deliveryDate,
-      remark: buildOrderRemark(form.remark, cart),
+      remark: form.remark,
       items: cart.map(item => ({
         model: baseModelName(item.model),
-        quantity: Number(item.quantity || 1)
+        quantity: Number(item.quantity || 1),
+        remark: buildLineRemark(item, form.remark)
       }))
     }).then(res => {
       this.setData({ submitting: false });

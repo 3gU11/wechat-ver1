@@ -640,15 +640,22 @@ async function createDealerOrder(payload) {
     const inventoryType = normalize(rawItem.inventoryType);
     const batchNo = normalize(rawItem.batchNo) || "";
     const eta = normalize(rawItem.eta);
+    const remark = normalize(rawItem.remark);
     const quantity = Math.max(1, Math.trunc(Number(rawItem.quantity || 1)));
     const key = batchNo || inventoryType ? reservationKey({ inventoryType, batchNo, model }) : `demand|${model}`;
     if (!merged.has(key)) {
-      merged.set(key, { model, batchNo, eta, inventoryType, quantity: 0, available: Number(rawItem.available || 0) });
+      merged.set(key, { model, batchNo, eta, inventoryType, quantity: 0, available: Number(rawItem.available || 0), remarks: [] });
     }
-    merged.get(key).quantity += quantity;
+    const item = merged.get(key);
+    item.quantity += quantity;
+    if (remark && item.remarks.indexOf(remark) === -1) {
+      item.remarks.push(remark);
+    }
   }
 
-  const items = Array.from(merged.values());
+  const items = Array.from(merged.values()).map(item => Object.assign({}, item, {
+    remark: item.remarks.join("\n")
+  }));
   if (!items.length) {
     const err = new Error("购物车为空");
     err.statusCode = 400;
@@ -712,7 +719,7 @@ async function createDealerOrder(payload) {
           item.inventoryType,
           item.quantity,
           order.deliveryDate,
-          order.remark,
+          item.remark || order.remark,
         ]
       );
     }
