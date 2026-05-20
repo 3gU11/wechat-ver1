@@ -2,10 +2,34 @@
   padding-top: 44rpx;
 }
 
+.login-page .brand-strip {
+  flex-direction: column;
+  justify-content: center;
+  gap: 14rpx;
+  margin-bottom: 34rpx;
+  text-align: center;
+}
+
+.login-page .brand-logo {
+  width: 50vw;
+  height: 17vw;
+  max-width: 380rpx;
+  max-height: 128rpx;
+}
+
+.app-title {
+  margin-top: 6rpx;
+  color: #14366f;
+  font-size: 34rpx;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
 .login-title {
   font-size: 48rpx;
   font-weight: 800;
   color: #14366f;
+  text-align: center;
 }
 
 .login-desc {
@@ -13,6 +37,7 @@
   color: #66758f;
   font-size: 28rpx;
   line-height: 1.6;
+  text-align: center;
 }
 
 .form-card {

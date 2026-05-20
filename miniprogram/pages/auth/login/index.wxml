@@ -2,6 +2,7 @@
   <view class="brand-strip">
     <image class="brand-logo" src="/images/rj-logo.png" mode="aspectFit" />
     <view>
+      <view class="app-title">瑞钧智科智能订单管理</view>
       <view class="brand-name">经销商门户</view>
       <view class="brand-subtitle">登录</view>
     </view>
@@ -11,7 +12,7 @@
 
   <view class="card form-card">
     <view class="field">
-      <view class="label">手机号 / admin</view>
+      <view class="label">手机号</view>
       <input placeholder="请输入手机号" value="{{phone}}" bindinput="onPhoneInput" />
     </view>
     <view class="field">
@@ -23,8 +24,4 @@
   <button class="primary-btn login-btn" loading="{{submitting}}" bindtap="login">登录</button>
   <view wx:if="{{statusText}}" class="status-text">{{statusText}}</view>
   <button class="secondary-btn register-btn" bindtap="goRegister">申请成为经销商</button>
-
-  <view class="demo muted">
-    <view>管理员：admin / admin123</view>
-  </view>
 </view>
