@@ -388,6 +388,7 @@ function getOrders() {
   const account = app.globalData.account || {};
   const query = {};
   if (account.role === "regional_manager") {
+    query.dealerId = account.id || "";
     query.regionalManagerName = account.contactName || account.name || "";
   } else if (account.role !== "admin") {
     query.dealerId = account.id || "";

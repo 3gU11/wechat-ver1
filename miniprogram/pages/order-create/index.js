@@ -35,7 +35,7 @@ function buildLineRemark(item, totalRemark) {
 function accountRegionalManagerName(account) {
   if (!account) return "";
   if (account.role === "regional_manager") {
-    return account.name || account.contactName || "";
+    return account.contactName || account.name || "";
   }
   return account.regionalManagerName || "";
 }

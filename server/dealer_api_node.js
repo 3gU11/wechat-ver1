@@ -746,11 +746,13 @@ async function listDealerOrders(filters = {}) {
     await ensureDealerOrdersTable(connection);
     const where = [];
     const params = [];
-    if (filters.dealerId) {
+    if (filters.dealerId && filters.regionalManagerName) {
+      where.push("(dealer_id = ? OR regional_manager_name = ?)");
+      params.push(filters.dealerId, filters.regionalManagerName);
+    } else if (filters.dealerId) {
       where.push("dealer_id = ?");
       params.push(filters.dealerId);
-    }
-    if (filters.regionalManagerName) {
+    } else if (filters.regionalManagerName) {
       where.push("regional_manager_name = ?");
       params.push(filters.regionalManagerName);
     }
