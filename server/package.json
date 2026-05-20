@@ -5,7 +5,6 @@
   "main": "dealer_api_node.js",
   "scripts": {
     "start": "node dealer_api_node.js",
-    "sync:wechat": "node sync_wechat_batch_summary.js",
     "clear:dealer": "node clear_dealer_identity_data.js"
   },
   "dependencies": {
