@@ -125,7 +125,7 @@ function isAdmin() {
 function getAccountRegionalManagerName(account) {
   if (!account) return "";
   if (account.role === "regional_manager") {
-    return account.name || account.contactName || "";
+    return account.contactName || account.name || "";
   }
   return account.regionalManagerName || "";
 }
@@ -356,7 +356,7 @@ function createOrder(payload) {
   const app = getAppSafe();
   const account = app.globalData.account || {};
   const regionalManagerName = getAccountRegionalManagerName(account) || payload.regionalManagerName || "";
-  return withMock(request({
+  const orderRequest = request({
     url: "/orders",
     method: "POST",
     data: Object.assign({}, payload, {
@@ -366,10 +366,17 @@ function createOrder(payload) {
         name: account.name || "",
         phone: account.phone || "",
         role: account.role || "",
+        contactName: account.contactName || "",
         regionalManagerName
       }
     })
-  }), {
+  });
+
+  if (!isMockMode()) {
+    return orderRequest.then(data => ({ data, mock: false }));
+  }
+
+  return withMock(orderRequest, {
     id: "O" + Date.now(),
     status: "regional_pending",
     message: "订单已提交，等待大区经理初审"
