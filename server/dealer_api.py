@@ -29,68 +29,16 @@ DB_CONFIG = {
     "cursorclass": pymysql.cursors.DictCursor,
 }
 
-TABLE_NAME = os.getenv("FINISHED_GOODS_TABLE", "finished_goods_data")
+TABLE_NAME = "wechat_batch_summary"
 
 
 FIELD_CANDIDATES = {
-    "model": [
-        "model",
-        "machine_model",
-        "product_model",
-        "goods_model",
-        "equipment_model",
-        "型号",
-        "机型",
-        "产品型号",
-    ],
-    "quantity": [
-        "available",
-        "available_qty",
-        "available_quantity",
-        "qty",
-        "quantity",
-        "count",
-        "stock",
-        "库存",
-        "数量",
-        "可订数量",
-    ],
-    "batch_no": [
-        "batch_no",
-        "batch",
-        "batch_number",
-        "production_batch",
-        "lot_no",
-        "批次号",
-        "批次",
-        "生产批次",
-    ],
-    "eta": [
-        "eta",
-        "expected_inbound_time",
-        "expected_inbound_date",
-        "estimated_storage_time",
-        "inbound_date",
-        "入库时间",
-        "预计入库时间",
-        "预计入库日期",
-    ],
-    "status": [
-        "status",
-        "state",
-        "inventory_status",
-        "lifecycle_status",
-        "状态",
-    ],
-    "bound": [
-        "bound",
-        "is_bound",
-        "bind_status",
-        "binding_status",
-        "订单绑定状态",
-        "绑定状态",
-        "已绑定",
-    ],
+    "model": ["model"],
+    "quantity": ["quantity"],
+    "batch_no": ["batch_no"],
+    "eta": ["expected_inbound_time"],
+    "status": ["status", "state", "inventory_status", "lifecycle_status"],
+    "bound": ["bound", "is_bound", "bind_status", "binding_status"],
 }
 
 

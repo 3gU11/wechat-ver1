@@ -31,7 +31,7 @@ function loadEnvFile() {
 loadEnvFile();
 
 const PORT = Number(process.env.PORT || 8001);
-const TABLE_NAME = process.env.FINISHED_GOODS_TABLE || "wechat_batch_summary";
+const TABLE_NAME = "wechat_batch_summary";
 
 function parseMysqlAddress(address) {
   const text = normalize(address);
@@ -57,15 +57,15 @@ const dbConfig = {
 };
 
 const fieldCandidates = {
-  model: ["model", "machine_model", "product_model", "goods_model", "equipment_model", "型号", "机型", "产品型号"],
-  quantity: ["available", "available_qty", "available_quantity", "qty", "quantity", "count", "stock", "库存", "数量", "可订数量"],
-  batchNo: ["batch_no", "batch", "batch_number", "production_batch", "lot_no", "批次号", "批次", "生产批次"],
-  eta: ["eta", "expected_inbound_time", "expected_inbound_date", "estimated_storage_time", "inbound_date", "入库时间", "预计入库时间", "预计入库日期"],
-  status: ["status", "state", "inventory_status", "lifecycle_status", "状态"],
-  bound: ["bound", "is_bound", "bind_status", "binding_status", "订单绑定状态", "绑定状态", "已绑定"],
-  heightened: ["加高", "heightened", "is_heightened", "isHeightened"],
-  originalBatchNo: ["原批次号", "original_batch_no", "source_batch_no"],
-  originalEta: ["原预计入库时间", "original_expected_inbound_time", "source_expected_inbound_time"]
+  model: ["model"],
+  quantity: ["quantity"],
+  batchNo: ["batch_no"],
+  eta: ["expected_inbound_time"],
+  status: ["status", "state", "inventory_status", "lifecycle_status"],
+  bound: ["bound", "is_bound", "bind_status", "binding_status"],
+  heightened: ["heightened"],
+  originalBatchNo: ["original_batch_no"],
+  originalEta: ["original_expected_inbound_time"]
 };
 
 function pickColumn(columns, key) {

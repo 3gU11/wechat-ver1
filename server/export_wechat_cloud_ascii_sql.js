@@ -67,10 +67,10 @@ async function main() {
       expected_inbound_time,
       model,
       quantity,
-      \`加高\` AS heightened,
-      \`原批次号\` AS original_batch_no,
-      \`原预计入库时间\` AS original_expected_inbound_time,
-      \`更新时间\` AS updated_at
+      heightened,
+      original_batch_no,
+      original_expected_inbound_time,
+      updated_at
     FROM wechat_batch_summary
     ORDER BY expected_inbound_time ASC, batch_no ASC, model ASC
   `);
