@@ -79,7 +79,7 @@
   height: 118rpx;
   padding: 0;
   border-radius: 50%;
-  background: #ffffff;
+  background: #fff3df;
   overflow: visible;
   box-shadow: 0 12rpx 28rpx rgba(31, 79, 154, 0.26);
 }
