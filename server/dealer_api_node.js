@@ -788,12 +788,14 @@ async function listDealerOrders(filters = {}) {
     }
 
     return Array.from(grouped.values()).map(order => {
-      const statuses = order.items.map(item => item.status);
+      const statusItems = order.items.filter(item => Number(item.quantity || 0) > 0);
+      const effectiveItems = statusItems.length ? statusItems : order.items;
+      const statuses = effectiveItems.map(item => normalize(item.status).toLowerCase());
       const isCompletedStatus = status => status === "completed" || status === "complete";
       const allCompleted = statuses.length > 0 && statuses.every(isCompletedStatus);
       const anyCompleted = statuses.some(isCompletedStatus);
       const allAllocated = statuses.every(status => status === "allocated");
-      const anyAllocated = order.items.some(item => item.status === "allocated" || Number(item.allocatedQty || 0) > 0);
+      const anyAllocated = effectiveItems.some(item => normalize(item.status).toLowerCase() === "allocated" || Number(item.allocatedQty || 0) > 0);
       const anyApproved = statuses.includes("approved");
       const allRejected = statuses.every(status => status === "rejected");
       const status = allCompleted
