@@ -167,6 +167,7 @@ Page({
       items: cart.map(item => ({
         model: baseModelName(item.model),
         quantity: Number(item.quantity || 1),
+        demandType: isHeightenedItem(item) ? "heightened" : "",
         remark: buildLineRemark(item, form.remark)
       }))
     }).then(res => {

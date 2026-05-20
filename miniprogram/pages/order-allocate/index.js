@@ -72,8 +72,13 @@ Page({
 
   buildLine(line, batches) {
     const demand = Number(line.quantity || 0);
+    const demandType = line.inventoryType === "heightened" ? "heightened" : "standard";
     const candidates = batches
-      .filter(item => item.model === line.model && Number(item.available || 0) > 0)
+      .filter(item => {
+        if (item.model !== line.model || Number(item.available || 0) <= 0) return false;
+        if (demandType === "heightened") return item.inventoryType === "heightened";
+        return item.inventoryType !== "heightened";
+      })
       .map(item => Object.assign({}, item, {
         key: allocationKey(item),
         recommended: Number(item.available || 0) >= demand,

@@ -641,10 +641,11 @@ async function createDealerOrder(payload) {
     const batchNo = normalize(rawItem.batchNo) || "";
     const eta = normalize(rawItem.eta);
     const remark = normalize(rawItem.remark);
+    const demandType = normalize(rawItem.demandType || (!batchNo && inventoryType === "heightened" ? "heightened" : ""));
     const quantity = Math.max(1, Math.trunc(Number(rawItem.quantity || 1)));
-    const key = batchNo || inventoryType ? reservationKey({ inventoryType, batchNo, model }) : `demand|${model}`;
+    const key = batchNo ? reservationKey({ inventoryType, batchNo, model }) : `demand|${demandType || "standard"}|${model}`;
     if (!merged.has(key)) {
-      merged.set(key, { model, batchNo, eta, inventoryType, quantity: 0, available: Number(rawItem.available || 0), remarks: [] });
+      merged.set(key, { model, batchNo, eta, inventoryType: demandType || inventoryType, quantity: 0, available: Number(rawItem.available || 0), remarks: [] });
     }
     const item = merged.get(key);
     item.quantity += quantity;
@@ -662,7 +663,7 @@ async function createDealerOrder(payload) {
     throw err;
   }
 
-  const batchItems = items.filter(item => item.batchNo || item.inventoryType);
+  const batchItems = items.filter(item => item.batchNo);
   if (batchItems.length) {
     const availableRows = await aggregateAvailabilityRows();
     const availableMap = new Map(availableRows.map(row => [reservationKey(row), Number(row.available || 0)]));
