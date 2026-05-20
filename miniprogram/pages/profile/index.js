@@ -1,6 +1,6 @@
 Page({
   data: {
-    account: {},
+    account: null,
     avatarText: "经"
   },
 
@@ -18,6 +18,10 @@ Page({
 
   goAdminReviews() {
     wx.navigateTo({ url: "/pages/admin/reviews/index" });
+  },
+
+  goOrderHistory() {
+    wx.navigateTo({ url: "/pages/order-history/index" });
   },
 
   logout() {

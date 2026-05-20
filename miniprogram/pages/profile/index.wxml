@@ -21,5 +21,6 @@
   </view>
 
   <button wx:if="{{account.role === 'admin'}}" class="primary-btn action-btn" bindtap="goAdminReviews">进入经销商审核</button>
+  <button wx:if="{{account}}" class="primary-btn action-btn" bindtap="goOrderHistory">查看历史订单</button>
   <button class="secondary-btn action-btn" bindtap="logout">退出登录</button>
 </view>

@@ -1,0 +1,29 @@
+<view class="page">
+  <view class="section-title">历史订单</view>
+
+  <view class="history-list">
+    <view class="card order-card" wx:for="{{orders}}" wx:key="id">
+      <view class="order-top">
+        <view class="order-id">{{item.id}}</view>
+        <view class="tag done">{{statusMap[item.status] || '已完成'}}</view>
+      </view>
+
+      <view class="customer">{{item.customerName}}</view>
+      <view wx:if="{{item.dealerName}}" class="meta">经销商：{{item.dealerName}}</view>
+      <view wx:if="{{item.regionalManagerName}}" class="meta">所属大区经理：{{item.regionalManagerName}}</view>
+      <view wx:if="{{item.regionalReviewedBy}}" class="meta">大区初审：{{item.regionalReviewedBy}} · {{item.regionalReviewedAt || '-'}}</view>
+      <view wx:if="{{item.regionalReviewNote}}" class="review-note">初审备注：{{item.regionalReviewNote}}</view>
+      <view class="meta">合计 {{item.quantity}} 台 · {{item.itemCount || 1}} 行</view>
+
+      <view wx:for="{{item.items}}" wx:for-item="line" wx:key="lineNo" class="line-item">
+        <view>{{line.model}} · {{line.quantity}} 台</view>
+        <view wx:if="{{line.batchNo}}">{{line.inventoryType === 'finished' ? '成品现货' : (line.inventoryType === 'heightened' ? '加高' : '在制')}} · {{line.batchNo}} · {{line.eta || '-'}}</view>
+        <view wx:else>未记录批次</view>
+      </view>
+
+      <view class="time">提交时间：{{item.createdAt}}</view>
+    </view>
+  </view>
+
+  <view wx:if="{{!loading && orders.length === 0}}" class="empty muted">暂无已完成订单</view>
+</view>
