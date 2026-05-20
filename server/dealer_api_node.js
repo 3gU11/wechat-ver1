@@ -1096,9 +1096,10 @@ async function mapRows() {
   return rows
     .map(row => {
       const rawModel = normalize(row[modelCol]);
-      const heightened = heightenedCol ? isHeightenedValue(row[heightenedCol]) : false;
+      const rawBatchNo = normalize(row[batchCol]);
+      const heightened = (heightenedCol ? isHeightenedValue(row[heightenedCol]) : false) || rawBatchNo === "加高";
       const model = heightened ? heightenedModelName(rawModel) : rawModel;
-      const batchNo = heightened ? "加高" : normalize(row[batchCol]);
+      const batchNo = heightened ? "加高" : rawBatchNo;
       const eta = etaCol && columns.includes(etaCol) ? normalize(row[etaCol]) : "";
       const originalBatchNo = originalBatchCol ? normalize(row[originalBatchCol]) : "";
       const originalEta = originalEtaCol ? normalize(row[originalEtaCol]) : "";
