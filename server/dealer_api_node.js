@@ -800,9 +800,8 @@ async function listDealerOrders(filters = {}) {
     return Array.from(grouped.values()).map(order => {
       const allStatuses = order.items.map(item => normalize(item.status).toLowerCase()).filter(Boolean);
       const reviewStatuses = order.items.map(item => normalize(item.regionalReviewStatus).toLowerCase()).filter(Boolean);
-      const isRejectedStatus = status => status === "rejected" || status === "regional_rejected";
-      const anyRejected = allStatuses.some(isRejectedStatus) || reviewStatuses.includes("rejected");
-      const rejectedStatus = allStatuses.includes("regional_rejected") || reviewStatuses.includes("rejected")
+      const anyRejected = allStatuses.some(isRejectedStatus) || reviewStatuses.some(isRejectedStatus);
+      const rejectedStatus = allStatuses.includes("regional_rejected") || reviewStatuses.some(isRejectedStatus)
         ? "regional_rejected"
         : "rejected";
       const statusItems = order.items.filter(item => Number(item.quantity || 0) > 0);
@@ -837,6 +836,11 @@ async function listDealerOrders(filters = {}) {
   } finally {
     await connection.end();
   }
+}
+
+function isRejectedStatus(status) {
+  const value = normalize(status).toLowerCase();
+  return value === "rejected" || value === "reject" || value.endsWith("_rejected") || value.endsWith("_reject");
 }
 
 async function reviewDealerOrderByRegionalManager(orderNo, payload) {

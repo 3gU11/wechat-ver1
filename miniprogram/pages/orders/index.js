@@ -1,10 +1,10 @@
 const api = require("../../utils/api");
 
-const HIDDEN_ORDER_STATUSES = ["rejected", "regional_rejected", "complete", "completed"];
+const HIDDEN_ORDER_STATUSES = ["reject", "rejected", "regional_rejected", "complete", "completed"];
 
 function isHiddenOrderStatus(status) {
   const value = String(status || "").toLowerCase();
-  return HIDDEN_ORDER_STATUSES.indexOf(value) !== -1 || value.endsWith("_rejected");
+  return HIDDEN_ORDER_STATUSES.indexOf(value) !== -1 || value.endsWith("_rejected") || value.endsWith("_reject");
 }
 
 Page({
