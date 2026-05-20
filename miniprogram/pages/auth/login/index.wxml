@@ -3,7 +3,6 @@
     <image class="brand-logo" src="/images/rj-logo.png" mode="aspectFit" />
     <view>
       <view class="app-title">瑞钧智科智能订单管理</view>
-      <view class="brand-name">经销商门户</view>
       <view class="brand-subtitle">登录</view>
     </view>
   </view>
