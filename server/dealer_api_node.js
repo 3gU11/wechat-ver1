@@ -798,6 +798,13 @@ async function listDealerOrders(filters = {}) {
     }
 
     return Array.from(grouped.values()).map(order => {
+      const allStatuses = order.items.map(item => normalize(item.status).toLowerCase()).filter(Boolean);
+      const reviewStatuses = order.items.map(item => normalize(item.regionalReviewStatus).toLowerCase()).filter(Boolean);
+      const isRejectedStatus = status => status === "rejected" || status === "regional_rejected";
+      const anyRejected = allStatuses.some(isRejectedStatus) || reviewStatuses.includes("rejected");
+      const rejectedStatus = allStatuses.includes("regional_rejected") || reviewStatuses.includes("rejected")
+        ? "regional_rejected"
+        : "rejected";
       const statusItems = order.items.filter(item => Number(item.quantity || 0) > 0);
       const effectiveItems = statusItems.length ? statusItems : order.items;
       const statuses = effectiveItems.map(item => normalize(item.status).toLowerCase());
@@ -807,17 +814,16 @@ async function listDealerOrders(filters = {}) {
       const allAllocated = statuses.every(status => status === "allocated");
       const anyAllocated = effectiveItems.some(item => normalize(item.status).toLowerCase() === "allocated" || Number(item.allocatedQty || 0) > 0);
       const anyApproved = statuses.includes("approved");
-      const allRejected = statuses.every(status => status === "rejected");
-      const status = allCompleted
-        ? "completed"
-        : anyCompleted
-          ? "partial_allocated"
-          : allAllocated
-            ? "allocated"
-            : anyAllocated
-              ? "partial_allocated"
-              : allRejected
-                ? "rejected"
+      const status = anyRejected
+        ? rejectedStatus
+        : allCompleted
+          ? "completed"
+          : anyCompleted
+            ? "partial_allocated"
+            : allAllocated
+              ? "allocated"
+              : anyAllocated
+                ? "partial_allocated"
                 : anyApproved
                   ? "approved"
                   : statuses[0];

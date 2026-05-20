@@ -2,6 +2,11 @@ const api = require("../../utils/api");
 
 const HIDDEN_ORDER_STATUSES = ["rejected", "regional_rejected", "complete", "completed"];
 
+function isHiddenOrderStatus(status) {
+  const value = String(status || "").toLowerCase();
+  return HIDDEN_ORDER_STATUSES.indexOf(value) !== -1 || value.endsWith("_rejected");
+}
+
 Page({
   data: {
     orders: [],
@@ -36,7 +41,7 @@ Page({
     api.getOrders()
       .then(res => {
         const orders = (res.data || []).filter(order => {
-          return HIDDEN_ORDER_STATUSES.indexOf(order.status) === -1;
+          return !isHiddenOrderStatus(order.status);
         });
         this.setData({ loading: false, orders });
       })
