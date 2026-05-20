@@ -31,7 +31,7 @@ function loadEnvFile() {
 loadEnvFile();
 
 const PORT = Number(process.env.PORT || 8001);
-const TABLE_NAME = process.env.FINISHED_GOODS_TABLE || "finished_goods_data";
+const TABLE_NAME = process.env.FINISHED_GOODS_TABLE || "wechat_batch_summary";
 
 function parseMysqlAddress(address) {
   const text = normalize(address);
