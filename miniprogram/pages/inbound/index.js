@@ -72,7 +72,7 @@ Page({
       .then(([plansRes, modelsRes]) => {
         const plans = plansRes.data || [];
         const modelOptions = ["全部机型"].concat(modelsRes.data || []);
-        this.setData({ loading: false, loadError: "", plans, modelOptions, selectedModelIndex: 0, selectedModel: "", openedId: plans.length ? plans[0].id : "" });
+        this.setData({ loading: false, loadError: "", plans, modelOptions, selectedModelIndex: 0, selectedModel: "", openedId: "" });
         this.applyModelFilter();
       })
       .catch(err => {
@@ -106,7 +106,7 @@ Page({
     }
     this.setData({
       filteredPlans,
-      openedId: filteredPlans.length ? filteredPlans[0].id : "",
+      openedId: "",
       emptyDesc: "当前账号：" + this.data.accountName + (selectedModel ? "，筛选机型：" + selectedModel : "")
     });
   },
