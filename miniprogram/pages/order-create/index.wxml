@@ -31,7 +31,7 @@
       <input value="{{regionalManagerName || '未绑定'}}" disabled />
     </view>
     <view class="field">
-      <view class="label">客户名称</view>
+      <view class="label">客户信息/地址</view>
       <input placeholder="终端客户或项目名称" data-field="customerName" bindinput="onInput" />
     </view>
     <view class="field">
