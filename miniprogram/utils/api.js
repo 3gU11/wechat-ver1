@@ -429,6 +429,16 @@ function allocateDealerOrder(orderId, items, note) {
   });
 }
 
+function updateOrderExtraRemarks(orderId, items) {
+  return request({
+    url: "/orders/" + encodeURIComponent(orderId) + "/extra-remarks",
+    method: "POST",
+    data: {
+      items: items || []
+    }
+  });
+}
+
 module.exports = {
   login,
   registerDealer,
@@ -448,5 +458,6 @@ module.exports = {
   createOrder,
   getOrders,
   reviewDealerOrder,
-  allocateDealerOrder
+  allocateDealerOrder,
+  updateOrderExtraRemarks
 };

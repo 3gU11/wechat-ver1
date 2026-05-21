@@ -67,6 +67,79 @@
   line-height: 1.5;
 }
 
+.extra-row {
+  margin-top: 10rpx;
+  min-height: 58rpx;
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.extra-label {
+  flex: 0 0 auto;
+  color: #66758f;
+  font-size: 24rpx;
+}
+
+.extra-input {
+  min-width: 0;
+  flex: 1;
+  height: 52rpx;
+  line-height: 52rpx;
+  padding: 0 12rpx;
+  border: 1rpx solid #d8e4f5;
+  border-radius: 8rpx;
+  background: #ffffff;
+  font-size: 24rpx;
+  box-sizing: border-box;
+}
+
+.extra-text {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 24rpx;
+  color: #334155;
+}
+
+.extra-qty {
+  flex: 0 0 auto;
+  font-size: 24rpx;
+  color: #66758f;
+}
+
+.qty-stepper {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  height: 52rpx;
+  border: 1rpx solid #d8e4f5;
+  border-radius: 8rpx;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.qty-stepper button {
+  width: 48rpx;
+  height: 52rpx;
+  line-height: 52rpx;
+  padding: 0;
+  border-radius: 0;
+  background: #eef4ff;
+  color: #1f4f9a;
+  font-size: 26rpx;
+}
+
+.qty-stepper input {
+  width: 58rpx;
+  height: 52rpx;
+  min-height: 52rpx;
+  text-align: center;
+  font-size: 24rpx;
+}
+
 .review-note {
   margin-top: 10rpx;
   padding: 12rpx 14rpx;
@@ -82,6 +155,26 @@
   justify-content: flex-end;
   gap: 16rpx;
   margin-top: 20rpx;
+}
+
+.remark-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 18rpx;
+}
+
+.remark-save-btn {
+  width: 190rpx;
+  height: 60rpx;
+  line-height: normal;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12rpx;
+  background: #22543d;
+  color: #ffffff;
+  font-size: 24rpx;
+  font-weight: 700;
 }
 
 .approve-btn,

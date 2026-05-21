@@ -51,6 +51,36 @@
   line-height: 1.5;
 }
 
+.extra-row {
+  margin-top: 10rpx;
+  min-height: 44rpx;
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.extra-label {
+  flex: 0 0 auto;
+  color: #66758f;
+  font-size: 24rpx;
+}
+
+.extra-text {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 24rpx;
+  color: #334155;
+}
+
+.extra-qty {
+  flex: 0 0 auto;
+  font-size: 24rpx;
+  color: #66758f;
+}
+
 .review-note {
   margin-top: 10rpx;
   padding: 12rpx 14rpx;

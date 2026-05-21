@@ -19,6 +19,11 @@
         <view>{{line.model}} · {{line.quantity}} 台</view>
         <view wx:if="{{line.batchNo}}">{{line.inventoryType === 'finished' ? '成品现货' : (line.inventoryType === 'heightened' ? '加高' : '在制')}} · {{line.batchNo}} · {{line.eta || '-'}}</view>
         <view wx:else>未记录批次</view>
+        <view class="extra-row">
+          <text class="extra-label">附加备注</text>
+          <text class="extra-text">{{line.extraRemark || '-'}}</text>
+          <text class="extra-qty">数量：{{line.ERMQ || 0}}</text>
+        </view>
       </view>
 
       <view class="time">提交时间：{{item.createdAt}}</view>

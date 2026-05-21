@@ -5,10 +5,10 @@
   </view>
 
   <view class="order-list">
-    <view class="card order-card" wx:for="{{orders}}" wx:key="id">
+    <view class="card order-card" wx:for="{{orders}}" wx:for-index="orderIndex" wx:key="id">
       <view class="order-top">
         <view class="order-id">{{item.id}}</view>
-        <view class="tag {{item.status === 'regional_pending' || item.status === 'pending' ? 'warn' : item.status === 'regional_rejected' || item.status === 'rejected' ? 'gray' : ''}}">{{statusMap[item.status] || item.status}}</view>
+        <view class="tag {{item.displayStatus === 'regional_pending' || item.displayStatus === 'pending' || item.displayStatus === 'factory_pending' ? 'warn' : item.displayStatus === 'regional_rejected' || item.displayStatus === 'rejected' ? 'gray' : ''}}">{{statusMap[item.displayStatus] || item.displayStatus}}</view>
       </view>
       <view class="customer">{{item.customerName}}</view>
       <view wx:if="{{item.dealerName}}" class="meta">经销商：{{item.dealerName}}</view>
@@ -16,12 +16,34 @@
       <view wx:if="{{item.regionalReviewedBy}}" class="meta">大区初审：{{item.regionalReviewedBy}} · {{item.regionalReviewedAt || '-'}}</view>
       <view wx:if="{{item.regionalReviewNote}}" class="review-note">初审备注：{{item.regionalReviewNote}}</view>
       <view class="meta">合计 {{item.quantity}} 台 · {{item.itemCount || 1}} 行</view>
-      <view wx:for="{{item.items}}" wx:for-item="line" wx:key="lineNo" class="line-item">
+      <view wx:for="{{item.items}}" wx:for-item="line" wx:for-index="lineIndex" wx:key="lineNo" class="line-item">
         <view>{{line.model}} · {{line.quantity}} 台</view>
         <view wx:if="{{line.batchNo}}">{{line.inventoryType === 'finished' ? '成品现货' : (line.inventoryType === 'heightened' ? '加高' : '在制')}} · {{line.batchNo}} · {{line.eta || '-'}}</view>
         <view wx:else>待大区经理分配具体批次</view>
+        <view class="extra-row">
+          <text class="extra-label">附加备注</text>
+          <input
+            wx:if="{{item.canEditExtraRemark}}"
+            class="extra-input"
+            value="{{line.extraRemarkDraft}}"
+            placeholder="可填写附加备注"
+            data-order-index="{{orderIndex}}"
+            data-line-index="{{lineIndex}}"
+            bindinput="onExtraRemarkInput"
+          />
+          <text wx:else class="extra-text">{{line.extraRemark || '-'}}</text>
+          <view wx:if="{{item.canEditExtraRemark}}" class="qty-stepper">
+            <button data-order-index="{{orderIndex}}" data-line-index="{{lineIndex}}" data-delta="-1" bindtap="changeERMQ">-</button>
+            <input value="{{line.ERMQDraft}}" type="number" data-order-index="{{orderIndex}}" data-line-index="{{lineIndex}}" bindinput="onERMQInput" />
+            <button data-order-index="{{orderIndex}}" data-line-index="{{lineIndex}}" data-delta="1" bindtap="changeERMQ">+</button>
+          </view>
+          <text wx:else class="extra-qty">数量：{{line.ERMQ || 0}}</text>
+        </view>
       </view>
       <view class="time">提交时间：{{item.createdAt}}</view>
+      <view wx:if="{{item.canEditExtraRemark}}" class="remark-actions">
+        <button class="remark-save-btn" data-order-index="{{orderIndex}}" loading="{{savingRemarkId === item.id}}" disabled="{{savingRemarkId !== ''}}" bindtap="saveExtraRemarks">保存附加备注</button>
+      </view>
       <view wx:if="{{isRegionalManager && item.status === 'regional_pending'}}" class="actions">
         <button class="reject-btn" data-id="{{item.id}}" data-status="rejected" loading="{{reviewingId === item.id}}" disabled="{{reviewingId !== ''}}" bindtap="reviewOrder">驳回</button>
         <button class="approve-btn allocate-btn" data-id="{{item.id}}" disabled="{{reviewingId !== ''}}" bindtap="goAllocate">分配批次</button>

@@ -196,6 +196,9 @@ async function ensureDealerOrdersTable(connection) {
       quantity INT NOT NULL DEFAULT 1,
       approved_qty INT NOT NULL DEFAULT 0,
       allocated_qty INT NOT NULL DEFAULT 0,
+      extra_remark TEXT,
+      ERMQ INT NOT NULL DEFAULT 0,
+      factory_pending TINYINT(1) NOT NULL DEFAULT 0,
       delivery_date VARCHAR(64) DEFAULT '',
       remark TEXT,
       status VARCHAR(32) NOT NULL DEFAULT 'pending',
@@ -226,6 +229,9 @@ async function ensureDealerOrdersTable(connection) {
     ["regional_manager_name", "ALTER TABLE dealer_orders ADD COLUMN regional_manager_name VARCHAR(128) DEFAULT '' AFTER dealer_phone"],
     ["approved_qty", "ALTER TABLE dealer_orders ADD COLUMN approved_qty INT NOT NULL DEFAULT 0 AFTER quantity"],
     ["allocated_qty", "ALTER TABLE dealer_orders ADD COLUMN allocated_qty INT NOT NULL DEFAULT 0 AFTER approved_qty"],
+    ["extra_remark", "ALTER TABLE dealer_orders ADD COLUMN extra_remark TEXT AFTER allocated_qty"],
+    ["ERMQ", "ALTER TABLE dealer_orders ADD COLUMN ERMQ INT NOT NULL DEFAULT 0 AFTER extra_remark"],
+    ["factory_pending", "ALTER TABLE dealer_orders ADD COLUMN factory_pending TINYINT(1) NOT NULL DEFAULT 0 AFTER ERMQ"],
     ["regional_review_status", "ALTER TABLE dealer_orders ADD COLUMN regional_review_status VARCHAR(32) NOT NULL DEFAULT 'pending' AFTER status"],
     ["regional_review_note", "ALTER TABLE dealer_orders ADD COLUMN regional_review_note TEXT AFTER regional_review_status"],
     ["regional_reviewed_by", "ALTER TABLE dealer_orders ADD COLUMN regional_reviewed_by VARCHAR(128) DEFAULT '' AFTER regional_review_note"],
@@ -780,6 +786,9 @@ async function listDealerOrders(filters = {}) {
         inventory_type AS inventoryType,
         quantity,
         allocated_qty AS allocatedQty,
+        extra_remark AS extraRemark,
+        ERMQ,
+        factory_pending AS factoryPending,
         delivery_date AS deliveryDate,
         remark,
         status,
@@ -820,6 +829,7 @@ async function listDealerOrders(filters = {}) {
       const allAllocated = statuses.every(status => status === "allocated");
       const anyAllocated = effectiveItems.some(item => normalize(item.status).toLowerCase() === "allocated" || Number(item.allocatedQty || 0) > 0);
       const anyApproved = statuses.includes("approved");
+      const anyFactoryPending = effectiveItems.some(item => Number(item.factoryPending || 0) === 1);
       const status = anyRejected
         ? rejectedStatus
         : allCompleted
@@ -835,6 +845,7 @@ async function listDealerOrders(filters = {}) {
                   : statuses[0];
       return Object.assign({}, order, {
         status,
+        factoryPending: allCompleted ? 0 : (anyFactoryPending ? 1 : 0),
         itemCount: order.items.length,
         model: order.items.map(item => `${item.model}x${item.quantity}`).join(" / "),
         batchNo: Array.from(new Set(order.items.map(item => item.batchNo || "-"))).join(" / ")
@@ -848,6 +859,90 @@ async function listDealerOrders(filters = {}) {
 function isRejectedStatus(status) {
   const value = normalize(status).toLowerCase();
   return value === "rejected" || value === "reject" || value.endsWith("_rejected") || value.endsWith("_reject");
+}
+
+function isCompletedOrderStatus(status) {
+  const value = normalize(status).toLowerCase();
+  return value === "complete" || value === "completed";
+}
+
+async function updateDealerOrderExtraRemarks(orderNo, payload) {
+  const orderId = requireText(orderNo, "订单号");
+  const rawItems = Array.isArray(payload.items) ? payload.items : [];
+  if (!rawItems.length) {
+    const err = new Error("请至少提交一条附加备注");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const connection = await mysql.createConnection(dbConfig);
+  try {
+    await ensureDealerOrdersTable(connection);
+    await connection.beginTransaction();
+
+    const [rows] = await connection.query(
+      "SELECT line_no, quantity, status, extra_remark, ERMQ, factory_pending FROM dealer_orders WHERE order_no = ? ORDER BY line_no ASC FOR UPDATE",
+      [orderId]
+    );
+    if (!rows.length) {
+      const err = new Error("订单不存在");
+      err.statusCode = 404;
+      throw err;
+    }
+    const statuses = rows.map(row => normalize(row.status).toLowerCase());
+    if (statuses.length && statuses.every(isCompletedOrderStatus)) {
+      const err = new Error("已完成订单不能修改附加备注");
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const rowsByLine = new Map(rows.map(row => [Number(row.line_no), row]));
+    let changed = false;
+    for (const rawItem of rawItems) {
+      const lineNo = Number(rawItem.lineNo);
+      const row = rowsByLine.get(lineNo);
+      if (!row) {
+        const err = new Error(`订单行不存在: ${lineNo}`);
+        err.statusCode = 400;
+        throw err;
+      }
+      const quantity = Math.max(0, Math.trunc(Number(row.quantity || 0)));
+      const extraRemark = normalize(rawItem.extraRemark);
+      let ermq = Math.max(0, Math.trunc(Number(rawItem.ERMQ || rawItem.ermq || 0)));
+      if (extraRemark && ermq === 0) {
+        ermq = quantity;
+      }
+      if (ermq > quantity) {
+        ermq = quantity;
+      }
+      if (extraRemark !== normalize(row.extra_remark) || ermq !== Number(row.ERMQ || 0)) {
+        changed = true;
+      }
+      await connection.query(
+        "UPDATE dealer_orders SET extra_remark = ?, ERMQ = ? WHERE order_no = ? AND line_no = ?",
+        [extraRemark, ermq, orderId, lineNo]
+      );
+    }
+
+    if (changed) {
+      await connection.query(
+        "UPDATE dealer_orders SET factory_pending = 1 WHERE order_no = ?",
+        [orderId]
+      );
+    }
+
+    await connection.commit();
+    return {
+      id: orderId,
+      factoryPending: changed ? 1 : Number(rows[0].factory_pending || 0),
+      message: "附加备注已保存"
+    };
+  } catch (err) {
+    try { await connection.rollback(); } catch (rollbackErr) {}
+    throw err;
+  } finally {
+    await connection.end();
+  }
 }
 
 async function reviewDealerOrderByRegionalManager(orderNo, payload) {
@@ -1417,6 +1512,12 @@ const server = http.createServer(async (req, res) => {
     if (regionalOrderAllocateMatch && req.method === "POST") {
       const payload = await readJsonBody(req);
       sendJson(res, 200, await allocateDealerOrderByRegionalManager(decodeURIComponent(regionalOrderAllocateMatch[1]), payload));
+      return;
+    }
+    const extraRemarkMatch = url.pathname.match(/^\/api\/dealer\/orders\/([^/]+)\/extra-remarks$/);
+    if (extraRemarkMatch && req.method === "POST") {
+      const payload = await readJsonBody(req);
+      sendJson(res, 200, await updateDealerOrderExtraRemarks(decodeURIComponent(extraRemarkMatch[1]), payload));
       return;
     }
     if (url.pathname === "/api/dealer/orders" && req.method === "GET") {
