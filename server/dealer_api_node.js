@@ -924,17 +924,15 @@ async function updateDealerOrderExtraRemarks(orderNo, payload) {
       );
     }
 
-    if (changed) {
-      await connection.query(
-        "UPDATE dealer_orders SET factory_pending = 1 WHERE order_no = ?",
-        [orderId]
-      );
-    }
+    await connection.query(
+      "UPDATE dealer_orders SET factory_pending = 1 WHERE order_no = ?",
+      [orderId]
+    );
 
     await connection.commit();
     return {
       id: orderId,
-      factoryPending: changed ? 1 : Number(rows[0].factory_pending || 0),
+      factoryPending: 1,
       message: "附加备注已保存"
     };
   } catch (err) {
