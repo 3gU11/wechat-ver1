@@ -113,17 +113,26 @@ Page({
       extraRemark: line.extraRemarkDraft || "",
       ERMQ: Number(line.ERMQDraft || 0)
     }));
-    this.setData({ savingRemarkId: order.id });
-    api.updateOrderExtraRemarks(order.id, items)
-      .then(() => {
-        wx.showToast({ title: "附加备注已保存" });
-        this.setData({ savingRemarkId: "" });
-        this.loadOrders();
-      })
-      .catch(err => {
-        this.setData({ savingRemarkId: "" });
-        wx.showToast({ title: err.message || "保存失败", icon: "none" });
-      });
+    wx.showModal({
+      title: "确认保存",
+      content: "保存后该订单将提交附加备注更新，请确认是否继续。",
+      confirmText: "保存",
+      confirmColor: "#1f4f9a",
+      success: modal => {
+        if (!modal.confirm) return;
+        this.setData({ savingRemarkId: order.id });
+        api.updateOrderExtraRemarks(order.id, items)
+          .then(() => {
+            wx.showToast({ title: "附加备注已保存" });
+            this.setData({ savingRemarkId: "" });
+            this.loadOrders();
+          })
+          .catch(err => {
+            this.setData({ savingRemarkId: "" });
+            wx.showToast({ title: err.message || "保存失败", icon: "none" });
+          });
+      }
+    });
   },
 
   goCreate() {
