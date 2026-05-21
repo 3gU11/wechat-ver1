@@ -32,6 +32,7 @@ loadEnvFile();
 
 const PORT = Number(process.env.PORT || 8001);
 const TABLE_NAME = "wechat_batch_summary";
+const ORDER_HOLD_STATUSES = ["regional_pending", "pending", "approved"];
 
 function parseMysqlAddress(address) {
   const text = normalize(address);
@@ -1083,12 +1084,13 @@ async function getActiveOrderHoldMap() {
         batch_no AS batchNo,
         eta,
         inventory_type AS inventoryType,
-        SUM(GREATEST(quantity - allocated_qty, 0)) AS qty
+        SUM(quantity) AS qty
        FROM dealer_orders
-       WHERE status IN ('regional_pending', 'pending', 'approved')
+       WHERE LOWER(status) IN (?, ?, ?)
          AND batch_no <> ''
-         AND quantity > allocated_qty
-       GROUP BY model, batch_no, eta, inventory_type`
+         AND quantity > 0
+       GROUP BY model, batch_no, eta, inventory_type`,
+      ORDER_HOLD_STATUSES
     );
     const map = new Map();
     for (const row of rows) {

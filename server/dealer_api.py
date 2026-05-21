@@ -30,6 +30,7 @@ DB_CONFIG = {
 }
 
 TABLE_NAME = "wechat_batch_summary"
+ORDER_HOLD_STATUSES = ("regional_pending", "pending", "approved")
 
 
 FIELD_CANDIDATES = {
@@ -134,12 +135,14 @@ def get_active_order_hold_map():
                 cursor.execute(
                     """
                     SELECT model, batch_no AS batchNo, inventory_type AS inventoryType,
-                           SUM(GREATEST(quantity - COALESCE(allocated_qty, 0), 0)) AS qty
+                           SUM(quantity) AS qty
                     FROM dealer_orders
-                    WHERE status IN ('pending', 'approved')
-                      AND quantity > COALESCE(allocated_qty, 0)
+                    WHERE LOWER(status) IN (%s, %s, %s)
+                      AND batch_no <> ''
+                      AND quantity > 0
                     GROUP BY model, batch_no, inventory_type
-                    """
+                    """,
+                    ORDER_HOLD_STATUSES,
                 )
                 rows = cursor.fetchall()
             except Exception:
