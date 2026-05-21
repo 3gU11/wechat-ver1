@@ -265,6 +265,7 @@ async function ensureDealerApplicationsTable(connection) {
       dealer_code VARCHAR(128) NOT NULL UNIQUE,
       company_name VARCHAR(255) NOT NULL,
       phone VARCHAR(64) NOT NULL UNIQUE,
+      password VARCHAR(255) NOT NULL DEFAULT '',
       contact_name VARCHAR(128) NOT NULL,
       region VARCHAR(255) DEFAULT '',
       role VARCHAR(32) NOT NULL DEFAULT 'dealer',
@@ -281,6 +282,7 @@ async function ensureDealerApplicationsTable(connection) {
   const [columns] = await connection.query("SHOW COLUMNS FROM dealer_applications");
   const columnNames = new Set(columns.map(column => column.Field));
   const additions = [
+    ["password", "ALTER TABLE dealer_applications ADD COLUMN password VARCHAR(255) NOT NULL DEFAULT '' AFTER phone"],
     ["role", "ALTER TABLE dealer_applications ADD COLUMN role VARCHAR(32) NOT NULL DEFAULT 'dealer' AFTER region"],
     ["regional_manager_name", "ALTER TABLE dealer_applications ADD COLUMN regional_manager_name VARCHAR(128) DEFAULT '' AFTER role"]
   ];
@@ -288,6 +290,10 @@ async function ensureDealerApplicationsTable(connection) {
     if (!columnNames.has(columnName)) {
       await connection.query(sql);
     }
+  }
+  const passwordColumn = columns.find(column => column.Field === "password");
+  if (passwordColumn && !/char|text/i.test(String(passwordColumn.Type || ""))) {
+    await connection.query("ALTER TABLE dealer_applications MODIFY COLUMN password VARCHAR(255) NOT NULL DEFAULT ''");
   }
 
 }

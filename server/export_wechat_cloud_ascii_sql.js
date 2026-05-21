@@ -122,6 +122,7 @@ async function main() {
   \`dealer_code\` varchar(128) NOT NULL,
   \`company_name\` varchar(255) NOT NULL,
   \`phone\` varchar(64) NOT NULL,
+  \`password\` varchar(255) NOT NULL DEFAULT '',
   \`contact_name\` varchar(128) NOT NULL,
   \`region\` varchar(255) DEFAULT '',
   \`role\` varchar(32) NOT NULL DEFAULT 'dealer',
