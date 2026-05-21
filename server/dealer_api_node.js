@@ -677,6 +677,7 @@ async function createDealerOrder(payload) {
   }
 
   const batchItems = items.filter(item => item.batchNo);
+  const allItemsHaveBatch = items.every(item => normalize(item.batchNo));
   if (batchItems.length) {
     const availableRows = await aggregateAvailabilityRows();
     const availableMap = new Map(availableRows.map(row => [reservationKey(row), Number(row.available || 0)]));
@@ -710,13 +711,15 @@ async function createDealerOrder(payload) {
   try {
     await ensureDealerOrdersTable(connection);
     await connection.beginTransaction();
+    const initialStatus = allItemsHaveBatch ? "pending" : "regional_pending";
+    const regionalReviewStatus = allItemsHaveBatch ? "approved" : "pending";
     for (let index = 0; index < items.length; index += 1) {
       const item = items[index];
       await connection.query(
         `INSERT INTO dealer_orders
          (order_no, line_no, dealer_id, dealer_name, dealer_phone, regional_manager_name, customer_name, contact_name, contact_phone,
           model, batch_no, eta, inventory_type, quantity, approved_qty, allocated_qty, delivery_date, remark, status, regional_review_status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, 'regional_pending', 'pending')`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, ?, ?)`,
         [
           order.orderNo,
           index + 1,
@@ -734,6 +737,8 @@ async function createDealerOrder(payload) {
           item.quantity,
           order.deliveryDate,
           item.remark || order.remark,
+          initialStatus,
+          regionalReviewStatus
         ]
       );
     }
@@ -747,9 +752,9 @@ async function createDealerOrder(payload) {
 
   return {
     id: order.orderNo,
-    status: "regional_pending",
+    status: allItemsHaveBatch ? "pending" : "regional_pending",
     itemCount: items.length,
-    message: "订单已提交，等待大区经理初审",
+    message: allItemsHaveBatch ? "订单已提交，已进入工厂审核" : "订单已提交，等待大区经理初审",
   };
 }
 

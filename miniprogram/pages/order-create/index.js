@@ -3,7 +3,7 @@
 const CART_KEY = "dealerOrderCart";
 
 function cartKey(item) {
-  return [item.model || ""].join("|");
+  return [item.inventoryType || "", item.batchNo || "", item.model || ""].join("|");
 }
 
 function isHeightenedItem(item) {
@@ -166,6 +166,9 @@ Page({
       remark: form.remark,
       items: cart.map(item => ({
         model: baseModelName(item.model),
+        batchNo: item.batchNo || "",
+        eta: item.eta || "",
+        inventoryType: item.inventoryType || "",
         quantity: Number(item.quantity || 1),
         demandType: isHeightenedItem(item) ? "heightened" : "",
         remark: buildLineRemark(item, form.remark)
