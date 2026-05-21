@@ -56,6 +56,21 @@ Page({
     });
   },
 
+  onPullDownRefresh() {
+    api.getOrders()
+      .then(res => {
+        const orders = (res.data || []).filter(order => {
+          return !isHiddenOrderStatus(order.status);
+        }).map(prepareOrder);
+        this.setData({ loading: false, orders });
+        wx.stopPullDownRefresh();
+      })
+      .catch(err => {
+        wx.showToast({ title: err.message || "刷新失败", icon: "none" });
+        wx.stopPullDownRefresh();
+      });
+  },
+
   loadOrders() {
     this.setData({ loading: true });
     api.getOrders()
