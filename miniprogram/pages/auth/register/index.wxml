@@ -6,8 +6,9 @@
       <view class="brand-subtitle">账号申请</view>
     </view>
   </view>
-  <view class="section-title">申请账号</view>
-  <view class="hint">普通经销商需要选择所属大区经理，审核通过后才能登录。</view>
+
+  <view class="section-title">填写注册信息</view>
+  <view class="hint">当前微信账号会绑定到本次申请。审核通过后，再次微信登录即可进入小程序。</view>
 
   <view class="card form-card">
     <view class="field">
@@ -26,18 +27,10 @@
     </view>
     <view class="field">
       <view class="label">手机号</view>
-      <input placeholder="登录手机号" type="number" data-field="phone" bindinput="onInput" />
+      <input placeholder="请输入手机号" type="number" data-field="phone" bindinput="onInput" />
     </view>
     <view class="field">
-      <view class="label">登录密码</view>
-      <input placeholder="请输入登录密码" password data-field="password" bindinput="onInput" />
-    </view>
-    <view class="field">
-      <view class="label">确认密码</view>
-      <input placeholder="请再次输入登录密码" password data-field="confirmPassword" bindinput="onInput" />
-    </view>
-    <view class="field">
-      <view class="label">{{form.role === 'regional_manager' ? '管辖大区' : '所在地区'}}</view>
+      <view class="label">{{form.role === 'regional_manager' ? '管理大区' : '所在地区'}}</view>
       <input placeholder="例如 江苏苏州 / 浙江宁波 / 华东" data-field="region" bindinput="onInput" />
     </view>
     <view wx:if="{{form.role === 'dealer'}}" class="field">

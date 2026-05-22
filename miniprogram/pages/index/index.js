@@ -6,8 +6,6 @@
     isAdminAccount: false,
     isRegionalManager: false,
     models: [],
-    phone: "",
-    password: "",
     submitting: false,
     statusText: ""
   },
@@ -35,46 +33,57 @@
     });
   },
 
-  onPhoneInput(e) {
-    this.setData({ phone: e.detail.value });
-  },
-
-  onPasswordInput(e) {
-    this.setData({ password: e.detail.value });
-  },
-
-  login() {
-    const phone = this.data.phone.trim();
-    const password = this.data.password.trim();
-
-    if (!phone || !password) {
-      this.setData({ statusText: "请输入账号和密码" });
-      return;
-    }
-
-    this.setData({ submitting: true, statusText: "正在登录，请稍候..." });
-
+  wechatLogin() {
+    if (this.data.submitting) return;
+    this.setData({ submitting: true, statusText: "正在获取微信登录凭证..." });
     const api = require("../../utils/api");
-    api.login({ phone, password })
-      .then(res => {
-        getApp().setSession(res.data.token, res.data.account);
-        this.setData({
-          submitting: false,
-          account: res.data.account,
-          isLoggedIn: true,
-          isAdminAccount: res.data.account.role === "admin",
-          isRegionalManager: res.data.account.role === "regional_manager",
-          statusText: "登录成功"
-        });
-        this.loadModels();
-      })
-      .catch(err => {
-        this.setData({ submitting: false, statusText: err.message || "登录失败" });
-      });
+
+    wx.login({
+      success: loginRes => {
+        if (!loginRes.code) {
+          this.setData({ submitting: false, statusText: "微信登录失败，请重试" });
+          return;
+        }
+        this.setData({ statusText: "正在登录..." });
+        api.wechatLogin({ code: loginRes.code })
+          .then(res => {
+            const data = res.data || {};
+            if (data.token && data.account) {
+              getApp().setSession(data.token, data.account);
+              this.setData({
+                submitting: false,
+                account: data.account,
+                isLoggedIn: true,
+                isAdminAccount: data.account.role === "admin",
+                isRegionalManager: data.account.role === "regional_manager",
+                statusText: "登录成功"
+              });
+              this.loadModels();
+              return;
+            }
+            if (data.needRegister && data.openidToken) {
+              this.setData({ submitting: false, statusText: "请先填写注册信息" });
+              wx.navigateTo({
+                url: "/pages/auth/register/index?openidToken=" + encodeURIComponent(data.openidToken)
+              });
+              return;
+            }
+            const message = data.message || "账号还未审核通过";
+            this.setData({ submitting: false, statusText: message });
+            wx.showModal({ title: "暂不能登录", content: message, showCancel: false });
+          })
+          .catch(err => {
+            this.setData({ submitting: false, statusText: err.message || "微信登录失败" });
+          });
+      },
+      fail: err => {
+        this.setData({ submitting: false, statusText: err.errMsg || "微信登录失败" });
+      }
+    });
   },
 
-  goRegister() {
-    wx.navigateTo({ url: "/pages/auth/register/index" });
+  goAdminLogin() {
+    wx.navigateTo({ url: "/pages/auth/login/index" });
   },
 
   goAdminReviews() {

@@ -202,6 +202,38 @@ function login(payload) {
   });
 }
 
+function wechatLogin(payload) {
+  const code = (payload && payload.code ? payload.code : "").trim();
+
+  function mockWechatLogin() {
+    return {
+      data: {
+        needRegister: true,
+        openidToken: "mock-openid-token-" + Date.now(),
+        message: "请先填写注册信息"
+      },
+      mock: true
+    };
+  }
+
+  if (isMockMode()) {
+    return Promise.resolve(mockWechatLogin());
+  }
+
+  return request({
+    url: "/auth/wechat-login",
+    method: "POST",
+    data: { code }
+  }).then(data => {
+    return { data, mock: false };
+  }).catch(err => {
+    if (err.message === "MOCK_MODE") {
+      return mockWechatLogin();
+    }
+    return Promise.reject(err);
+  });
+}
+
 function registerDealer(payload) {
   return request({
     url: "/auth/register",
@@ -216,7 +248,8 @@ function registerDealer(payload) {
         id: "dealer-" + Date.now(),
         companyName: payload.companyName,
         phone: payload.phone,
-        password: payload.password,
+        password: payload.password || "",
+        openidToken: payload.openidToken || "",
         contactName: payload.contactName,
         region: payload.region,
         role: payload.role || "dealer",
@@ -441,6 +474,7 @@ function updateOrderExtraRemarks(orderId, items) {
 
 module.exports = {
   login,
+  wechatLogin,
   registerDealer,
   getRegionalManagers,
   getDealerApplications,

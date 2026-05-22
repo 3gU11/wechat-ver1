@@ -1,4 +1,5 @@
 ﻿const http = require("http");
+const https = require("https");
 const { URL } = require("url");
 const fs = require("fs");
 const path = require("path");
@@ -35,6 +36,7 @@ const PORT = Number(process.env.PORT || 8001);
 const TABLE_NAME = "wechat_batch_summary";
 const ORDER_HOLD_STATUSES = ["regional_pending", "pending", "approved"];
 const PASSWORD_HASH_PREFIX = "scrypt$";
+const AUTH_TOKEN_PREFIX = "rjv1.";
 
 function parseMysqlAddress(address) {
   const text = normalize(address);
@@ -117,6 +119,82 @@ function verifyPassword(password, storedPassword) {
 
 function isPasswordHash(value) {
   return normalize(value).startsWith(PASSWORD_HASH_PREFIX);
+}
+
+function base64UrlEncode(value) {
+  return Buffer.from(value).toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function base64UrlDecode(value) {
+  const padded = value.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(value.length / 4) * 4, "=");
+  return Buffer.from(padded, "base64").toString("utf8");
+}
+
+function authSecret() {
+  return process.env.AUTH_TOKEN_SECRET || process.env.WECHAT_TOKEN_SECRET || process.env.WECHAT_SECRET || "rj-wechat-local-dev-secret";
+}
+
+function signTokenPayload(payload) {
+  const body = base64UrlEncode(JSON.stringify(payload));
+  const signature = crypto.createHmac("sha256", authSecret()).update(body).digest("base64")
+    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+  return `${AUTH_TOKEN_PREFIX}${body}.${signature}`;
+}
+
+function verifyTokenPayload(token) {
+  const text = normalize(token);
+  if (!text.startsWith(AUTH_TOKEN_PREFIX)) {
+    return null;
+  }
+  const raw = text.slice(AUTH_TOKEN_PREFIX.length);
+  const [body, signature] = raw.split(".");
+  if (!body || !signature) {
+    return null;
+  }
+  const expected = crypto.createHmac("sha256", authSecret()).update(body).digest("base64")
+    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+  const expectedBuffer = Buffer.from(expected);
+  const actualBuffer = Buffer.from(signature);
+  if (expectedBuffer.length !== actualBuffer.length || !crypto.timingSafeEqual(expectedBuffer, actualBuffer)) {
+    return null;
+  }
+  try {
+    const payload = JSON.parse(base64UrlDecode(body));
+    if (payload.exp && Date.now() > Number(payload.exp)) {
+      return null;
+    }
+    return payload;
+  } catch (err) {
+    return null;
+  }
+}
+
+function makeAuthToken(account) {
+  return signTokenPayload({
+    type: "auth",
+    sub: account.id,
+    role: account.role || "dealer",
+    exp: Date.now() + 1000 * 60 * 60 * 24 * 30
+  });
+}
+
+function makeOpenidToken(openid, sessionKey) {
+  return signTokenPayload({
+    type: "openid",
+    openid,
+    sessionKey: sessionKey || "",
+    exp: Date.now() + 1000 * 60 * 30
+  });
+}
+
+function verifyOpenidToken(token) {
+  const payload = verifyTokenPayload(token);
+  if (!payload || payload.type !== "openid" || !payload.openid) {
+    const err = new Error("微信注册凭证无效或已过期，请重新微信登录");
+    err.statusCode = 401;
+    throw err;
+  }
+  return payload;
 }
 
 function isUnbound(row, boundCol) {
@@ -314,6 +392,9 @@ async function ensureDealerApplicationsTable(connection) {
       company_name VARCHAR(255) NOT NULL,
       phone VARCHAR(64) NOT NULL UNIQUE,
       password VARCHAR(255) NOT NULL DEFAULT '',
+      openid VARCHAR(128) DEFAULT NULL,
+      session_key VARCHAR(255) DEFAULT '',
+      wechat_bound_at DATETIME NULL,
       contact_name VARCHAR(128) NOT NULL,
       region VARCHAR(255) DEFAULT '',
       role VARCHAR(32) NOT NULL DEFAULT 'dealer',
@@ -323,7 +404,8 @@ async function ensureDealerApplicationsTable(connection) {
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       INDEX idx_status (status),
-      INDEX idx_phone (phone)
+      INDEX idx_phone (phone),
+      UNIQUE KEY uq_dealer_openid (openid)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
   `);
 
@@ -331,6 +413,9 @@ async function ensureDealerApplicationsTable(connection) {
   const columnNames = new Set(columns.map(column => column.Field));
   const additions = [
     ["password", "ALTER TABLE dealer_applications ADD COLUMN password VARCHAR(255) NOT NULL DEFAULT '' AFTER phone"],
+    ["openid", "ALTER TABLE dealer_applications ADD COLUMN openid VARCHAR(128) DEFAULT NULL AFTER password"],
+    ["session_key", "ALTER TABLE dealer_applications ADD COLUMN session_key VARCHAR(255) DEFAULT '' AFTER openid"],
+    ["wechat_bound_at", "ALTER TABLE dealer_applications ADD COLUMN wechat_bound_at DATETIME NULL AFTER session_key"],
     ["role", "ALTER TABLE dealer_applications ADD COLUMN role VARCHAR(32) NOT NULL DEFAULT 'dealer' AFTER region"],
     ["regional_manager_name", "ALTER TABLE dealer_applications ADD COLUMN regional_manager_name VARCHAR(128) DEFAULT '' AFTER role"]
   ];
@@ -343,7 +428,11 @@ async function ensureDealerApplicationsTable(connection) {
   if (passwordColumn && !/char|text/i.test(String(passwordColumn.Type || ""))) {
     await connection.query("ALTER TABLE dealer_applications MODIFY COLUMN password VARCHAR(255) NOT NULL DEFAULT ''");
   }
-
+  const [indexes] = await connection.query("SHOW INDEX FROM dealer_applications");
+  const indexNames = new Set(indexes.map(index => index.Key_name));
+  if (!indexNames.has("uq_dealer_openid")) {
+    await connection.query("ALTER TABLE dealer_applications ADD UNIQUE KEY uq_dealer_openid (openid)");
+  }
 }
 
 async function ensureSchemaMigrationsTable(connection) {
@@ -449,6 +538,10 @@ function accountIdFromToken(req) {
   if (token === "local-admin-token" || token === "mock-admin-token") return "admin";
   if (token.startsWith("dealer-token-")) return token.slice("dealer-token-".length);
   if (token.startsWith("mock-dealer-token-")) return token.slice("mock-dealer-token-".length);
+  const payload = verifyTokenPayload(token);
+  if (payload && payload.type === "auth" && payload.sub) {
+    return payload.role === "admin" ? "admin" : normalize(payload.sub);
+  }
   return "";
 }
 
@@ -492,10 +585,125 @@ async function loadAccountByToken(req) {
   }
 }
 
+async function exchangeWechatCode(code) {
+  const appid = process.env.WECHAT_APPID || process.env.WECHAT_APP_ID || process.env.WX_APPID;
+  const secret = process.env.WECHAT_SECRET || process.env.WECHAT_APP_SECRET || process.env.WX_SECRET;
+  if (!appid || !secret) {
+    const err = new Error("微信登录配置缺失，请设置 WECHAT_APPID 和 WECHAT_SECRET");
+    err.statusCode = 500;
+    throw err;
+  }
+
+  const apiUrl = new URL("https://api.weixin.qq.com/sns/jscode2session");
+  apiUrl.searchParams.set("appid", appid);
+  apiUrl.searchParams.set("secret", secret);
+  apiUrl.searchParams.set("js_code", code);
+  apiUrl.searchParams.set("grant_type", "authorization_code");
+
+  const data = await new Promise((resolve, reject) => {
+    const request = https.get(apiUrl, response => {
+      let body = "";
+      response.on("data", chunk => { body += chunk; });
+      response.on("end", () => {
+        try {
+          resolve(JSON.parse(body || "{}"));
+        } catch (err) {
+          reject(new Error("微信登录响应解析失败"));
+        }
+      });
+    });
+    request.on("error", reject);
+    request.setTimeout(8000, () => {
+      request.destroy(new Error("微信登录接口超时"));
+    });
+  });
+
+  if (data.errcode) {
+    const err = new Error(data.errmsg || `微信登录失败：${data.errcode}`);
+    err.statusCode = 502;
+    throw err;
+  }
+  if (!data.openid) {
+    const err = new Error("微信登录未返回openid");
+    err.statusCode = 502;
+    throw err;
+  }
+  return data;
+}
+
+function publicAccount(dealer) {
+  return {
+    id: dealer.id,
+    role: dealer.role || "dealer",
+    name: dealer.name,
+    phone: dealer.phone,
+    contactName: dealer.contactName,
+    region: dealer.region,
+    regionalManagerName: dealer.regionalManagerName || "",
+    status: dealer.status
+  };
+}
+
+async function loginDealerByWechat(payload) {
+  const code = requireText(payload.code, "微信登录code");
+  const wxSession = await exchangeWechatCode(code);
+  const connection = await mysql.createConnection(dbConfig);
+  try {
+    await ensureDealerApplicationsTable(connection);
+    const [rows] = await connection.query(
+      `SELECT
+        dealer_code AS id,
+        company_name AS name,
+        phone,
+        contact_name AS contactName,
+        region,
+        role,
+        regional_manager_name AS regionalManagerName,
+        status
+       FROM dealer_applications
+       WHERE openid = ?
+       LIMIT 1`,
+      [wxSession.openid]
+    );
+
+    if (!rows.length) {
+      return {
+        needRegister: true,
+        openidToken: makeOpenidToken(wxSession.openid, wxSession.session_key || ""),
+        message: "请先填写注册信息"
+      };
+    }
+
+    const dealer = rows[0];
+    await connection.query(
+      "UPDATE dealer_applications SET session_key = ?, wechat_bound_at = COALESCE(wechat_bound_at, NOW()) WHERE dealer_code = ?",
+      [wxSession.session_key || "", dealer.id]
+    );
+
+    if (dealer.status !== "approved") {
+      return {
+        needRegister: false,
+        status: dealer.status,
+        pendingReview: dealer.status === "pending",
+        message: dealer.status === "rejected" ? "注册申请未通过，请联系管理员" : "注册申请已提交，请等待管理员审核"
+      };
+    }
+
+    return {
+      needRegister: false,
+      token: makeAuthToken(dealer),
+      account: publicAccount(dealer)
+    };
+  } finally {
+    await connection.end();
+  }
+}
+
 async function createDealerApplication(payload) {
   const companyName = requireText(payload.companyName, "经销商公司");
   const phone = requireText(payload.phone, "手机号");
-  const password = hashPassword(requireText(payload.password, "登录密码"));
+  const openidSession = verifyOpenidToken(payload.openidToken);
+  const password = payload.password ? hashPassword(payload.password) : "";
   const contactName = requireText(payload.contactName, "姓名");
   const region = requireText(payload.region, "所在地区");
   const role = normalize(payload.role) === "regional_manager" ? "regional_manager" : "dealer";
@@ -512,20 +720,20 @@ async function createDealerApplication(payload) {
   try {
     await ensureDealerApplicationsTable(connection);
     const [exists] = await connection.query(
-      "SELECT dealer_code FROM dealer_applications WHERE phone = ? LIMIT 1",
-      [phone]
+      "SELECT dealer_code FROM dealer_applications WHERE phone = ? OR openid = ? LIMIT 1",
+      [phone, openidSession.openid]
     );
     if (exists.length) {
-      const err = new Error("该手机号已提交过注册申请");
+      const err = new Error("该手机号或微信账号已提交过注册申请");
       err.statusCode = 400;
       throw err;
     }
 
     await connection.query(
       `INSERT INTO dealer_applications
-        (dealer_code, company_name, phone, password, contact_name, region, role, regional_manager_name, remark, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
-      [dealerCode, companyName, phone, password, contactName, region, role, regionalManagerName, remark]
+        (dealer_code, company_name, phone, password, openid, session_key, wechat_bound_at, contact_name, region, role, regional_manager_name, remark, status)
+       VALUES (?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?, ?, ?, 'pending')`,
+      [dealerCode, companyName, phone, password, openidSession.openid, openidSession.sessionKey || "", contactName, region, role, regionalManagerName, remark]
     );
   } finally {
     await connection.end();
@@ -1694,6 +1902,11 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === "/api/dealer/auth/login" && req.method === "POST") {
       const payload = await readJsonBody(req);
       sendJson(res, 200, await loginDealer(payload));
+      return;
+    }
+    if (url.pathname === "/api/dealer/auth/wechat-login" && req.method === "POST") {
+      const payload = await readJsonBody(req);
+      sendJson(res, 200, await loginDealerByWechat(payload));
       return;
     }
     if (url.pathname === "/api/dealer/auth/register" && req.method === "POST") {

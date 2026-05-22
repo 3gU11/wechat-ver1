@@ -123,6 +123,9 @@ async function main() {
   \`company_name\` varchar(255) NOT NULL,
   \`phone\` varchar(64) NOT NULL,
   \`password\` varchar(255) NOT NULL DEFAULT '',
+  \`openid\` varchar(128) DEFAULT NULL,
+  \`session_key\` varchar(255) DEFAULT '',
+  \`wechat_bound_at\` datetime DEFAULT NULL,
   \`contact_name\` varchar(128) NOT NULL,
   \`region\` varchar(255) DEFAULT '',
   \`role\` varchar(32) NOT NULL DEFAULT 'dealer',
@@ -134,6 +137,7 @@ async function main() {
   PRIMARY KEY (\`id\`),
   UNIQUE KEY \`dealer_code\` (\`dealer_code\`),
   UNIQUE KEY \`phone\` (\`phone\`),
+  UNIQUE KEY \`uq_dealer_openid\` (\`openid\`),
   KEY \`idx_status\` (\`status\`),
   KEY \`idx_phone\` (\`phone\`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;`);

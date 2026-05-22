@@ -8,22 +8,11 @@
       </view>
     </view>
     <view class="login-title">经销商登录</view>
-    <view class="login-desc">普通经销商和大区经理审核通过后，使用手机号和登录密码进入小程序。</view>
+    <view class="login-desc">使用当前微信账号登录。首次使用会进入注册资料填写，审核通过后即可进入小程序。</view>
 
-    <view class="card form-card">
-      <view class="field">
-        <view class="label">手机号</view>
-        <input placeholder="请输入手机号" value="{{phone}}" bindinput="onPhoneInput" />
-      </view>
-      <view class="field">
-        <view class="label">登录密码</view>
-        <input placeholder="请输入登录密码" password value="{{password}}" bindinput="onPasswordInput" />
-      </view>
-    </view>
-
-    <button class="primary-btn login-btn" loading="{{submitting}}" bindtap="login">登录</button>
+    <button class="primary-btn login-btn" loading="{{submitting}}" bindtap="wechatLogin">微信登录 / 注册</button>
     <view wx:if="{{statusText}}" class="status-text">{{statusText}}</view>
-    <button class="secondary-btn login-btn" bindtap="goRegister">申请成为经销商</button>
+    <button class="secondary-btn login-btn" bindtap="goAdminLogin">管理员登录</button>
   </view>
 
   <view wx:elif="{{isAdminAccount}}">
