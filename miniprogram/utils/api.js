@@ -146,7 +146,7 @@ function setOrdersTabBadge(count) {
   }
 }
 
-function refreshRegionalPendingBadge() {
+function refreshRegionalPendingBadge(options = {}) {
   const account = getCurrentAccount();
   if (!account || account.role !== "regional_manager") {
     setOrdersTabBadge(0);
@@ -164,10 +164,18 @@ function refreshRegionalPendingBadge() {
       pageSize: 1
     }
   }).then(data => {
-    const count = Array.isArray(data) ? data.length : Number(data && data.total || 0);
+    const count = Array.isArray(data) ? data.length : Number(data && data.total);
+    if (!Number.isFinite(count)) {
+      return 0;
+    }
     setOrdersTabBadge(count);
     return count;
   }).catch(() => {
+    if (Number.isFinite(Number(options.fallbackCount))) {
+      const fallbackCount = Number(options.fallbackCount);
+      setOrdersTabBadge(fallbackCount);
+      return fallbackCount;
+    }
     return 0;
   });
 }
@@ -526,6 +534,7 @@ module.exports = {
   login,
   wechatLogin,
   registerDealer,
+  setOrdersTabBadge,
   refreshRegionalPendingBadge,
   getRegionalManagers,
   getDealerApplications,

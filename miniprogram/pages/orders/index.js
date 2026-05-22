@@ -62,12 +62,18 @@ Page({
         const rawOrders = rows
           .filter(order => !orderUtil.isRejectedStatus(order.status) && !orderUtil.isCompletedStatus(order.status))
           .map(orderUtil.prepareOrder);
+        const pendingRegionalCount = this.data.isRegionalManager
+          ? rawOrders.filter(order => order.status === "regional_pending").length
+          : 0;
         this.setData({
           loading: false,
           rawOrders,
           refreshedAt: new Date().toTimeString().slice(0, 5)
         }, () => this.applyFilters());
-        api.refreshRegionalPendingBadge();
+        if (this.data.isRegionalManager) {
+          api.setOrdersTabBadge(pendingRegionalCount);
+          api.refreshRegionalPendingBadge({ fallbackCount: pendingRegionalCount });
+        }
         if (options.pullDown) {
           wx.showToast({ title: "已刷新", icon: "none" });
         }
