@@ -135,6 +135,10 @@ function authSecret() {
   return process.env.AUTH_TOKEN_SECRET || process.env.WECHAT_TOKEN_SECRET || process.env.WECHAT_SECRET || "rj-wechat-local-dev-secret";
 }
 
+function envFlagDisabled(value) {
+  return ["0", "false", "no", "off"].includes(normalize(value).toLowerCase());
+}
+
 function signTokenPayload(payload) {
   const body = base64UrlEncode(JSON.stringify(payload));
   const signature = crypto.createHmac("sha256", authSecret()).update(body).digest("base64")
@@ -602,7 +606,11 @@ async function exchangeWechatCode(code) {
   apiUrl.searchParams.set("grant_type", "authorization_code");
 
   const data = await new Promise((resolve, reject) => {
-    const request = https.get(apiUrl, response => {
+    const requestOptions = {
+      servername: "api.weixin.qq.com",
+      rejectUnauthorized: !envFlagDisabled(process.env.WECHAT_TLS_REJECT_UNAUTHORIZED)
+    };
+    const request = https.get(apiUrl, requestOptions, response => {
       let body = "";
       response.on("data", chunk => { body += chunk; });
       response.on("end", () => {
