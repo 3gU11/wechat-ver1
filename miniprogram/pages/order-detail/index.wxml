@@ -1,0 +1,47 @@
+<view class="page">
+  <view wx:if="{{loading}}" class="empty muted">加载中...</view>
+  <view wx:elif="{{notFound}}" class="empty muted">订单不存在或已无权限查看</view>
+
+  <view wx:else>
+    <view class="section-title">订单详情</view>
+    <view class="card summary-card">
+      <view class="top-row">
+        <view class="order-id">{{order.id}}</view>
+        <view class="tag {{order.displayStatus === 'regional_pending' || order.displayStatus === 'pending' || order.displayStatus === 'factory_pending' ? 'warn' : order.displayStatus === 'completed' ? 'done' : ''}}">
+          {{statusMap[order.displayStatus] || order.displayStatus}}
+        </view>
+      </view>
+      <view class="field">客户信息/地址：{{order.customerName || '-'}}</view>
+      <view class="field">联系人：{{order.contactName || '-'}}</view>
+      <view class="field">联系电话：{{order.contactPhone || '-'}}</view>
+      <view wx:if="{{order.dealerName}}" class="field">经销商：{{order.dealerName}}</view>
+      <view wx:if="{{order.regionalManagerName}}" class="field">所属大区经理：{{order.regionalManagerName}}</view>
+      <view class="field">提交时间：{{order.createdAt || '-'}}</view>
+      <view class="field">期望交期：{{order.deliveryDate || '-'}}</view>
+      <view class="field">合计：{{order.quantity}} 台 · {{order.itemCount || 1}} 行</view>
+    </view>
+
+    <view class="card info-card">
+      <view class="card-title">备注与审核</view>
+      <view class="field">原始备注：{{order.remark || '-'}}</view>
+      <view wx:if="{{order.regionalReviewedBy}}" class="field">大区初审：{{order.regionalReviewedBy}} · {{order.regionalReviewedAt || '-'}}</view>
+      <view wx:if="{{order.regionalReviewNote}}" class="note">初审备注：{{order.regionalReviewNote}}</view>
+      <view wx:if="{{order.factoryPending}}" class="note pending">附加备注等待工厂确认</view>
+      <view wx:if="{{order.contractNo}}" class="field">合同号：{{order.contractNo}}</view>
+      <view wx:if="{{order.v7OrderNo}}" class="field">V7订单号：{{order.v7OrderNo}}</view>
+      <view wx:if="{{order.syncStatus}}" class="field">同步状态：{{order.syncStatus}}</view>
+      <view wx:if="{{order.lastSyncedAt}}" class="field">最近同步：{{order.lastSyncedAt}}</view>
+      <view wx:if="{{order.syncError}}" class="note">同步错误：{{order.syncError}}</view>
+    </view>
+
+    <view class="card lines-card">
+      <view class="card-title">机型明细</view>
+      <view wx:for="{{order.items}}" wx:for-item="line" wx:key="lineNo" class="line-item">
+        <view class="line-main">{{line.model}} · {{line.quantity}} 台</view>
+        <view class="line-meta">{{line.inventoryTypeText}} · {{line.batchNo || '-'}} · {{line.eta || '-'}}</view>
+        <view class="line-meta">附加备注：{{line.extraRemark || '-'}}</view>
+        <view class="line-meta">附加备注数量：{{line.ERMQ || 0}}</view>
+      </view>
+    </view>
+  </view>
+</view>

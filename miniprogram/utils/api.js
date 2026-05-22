@@ -383,10 +383,10 @@ function createOrder(payload) {
   });
 }
 
-function getOrders() {
+function getOrders(filters) {
   const app = getAppSafe();
   const account = app.globalData.account || {};
-  const query = {};
+  const query = Object.assign({}, filters || {});
   if (account.role === "regional_manager") {
     query.dealerId = account.id || "";
     query.regionalManagerName = account.contactName || account.name || "";

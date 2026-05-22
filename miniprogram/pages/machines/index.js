@@ -37,17 +37,14 @@ Page({
 
   loadModels() {
     this.setData({ loading: true });
-    api.getDealerInventory({
-      model: this.data.modelKeyword
-    }).then(res => {
-      this.setData({
-        loading: false,
-        models: res.data || []
+    api.getDealerInventory({ model: this.data.modelKeyword })
+      .then(res => {
+        this.setData({ loading: false, models: res.data || [] });
+      })
+      .catch(err => {
+        this.setData({ loading: false });
+        wx.showToast({ title: err.message || "加载失败", icon: "none" });
       });
-    }).catch(err => {
-      this.setData({ loading: false });
-      wx.showToast({ title: err.message || "加载失败", icon: "none" });
-    });
   },
 
   getCart() {
@@ -60,8 +57,7 @@ Page({
   },
 
   refreshCartCount() {
-    const cart = this.getCart();
-    this.setData({ cartCount: cart.reduce((sum, item) => sum + Number(item.quantity || 0), 0) });
+    this.saveCart(this.getCart());
   },
 
   openQuantityModal(e) {
@@ -74,12 +70,7 @@ Page({
   },
 
   closeQuantityModal() {
-    this.setData({
-      quantityModalVisible: false,
-      pendingModel: "",
-      pendingAvailable: 0,
-      selectedQuantity: 0
-    });
+    this.setData({ quantityModalVisible: false, pendingModel: "", pendingAvailable: 0, selectedQuantity: 0 });
   },
 
   stopModalTap() {},

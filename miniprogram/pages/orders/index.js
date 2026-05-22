@@ -1,54 +1,47 @@
 const api = require("../../utils/api");
-
-const HIDDEN_ORDER_STATUSES = ["reject", "rejected", "regional_rejected", "complete", "completed"];
-const COMPLETED_STATUSES = ["complete", "completed"];
-
-function isHiddenOrderStatus(status) {
-  const value = String(status || "").toLowerCase();
-  return HIDDEN_ORDER_STATUSES.indexOf(value) !== -1 || value.endsWith("_rejected") || value.endsWith("_reject");
-}
-
-function isCompletedStatus(status) {
-  return COMPLETED_STATUSES.indexOf(String(status || "").toLowerCase()) !== -1;
-}
-
-function prepareOrder(order) {
-  const completed = isCompletedStatus(order.status);
-  const factoryPending = !completed && Number(order.factoryPending || 0) === 1;
-  return Object.assign({}, order, {
-    displayStatus: factoryPending ? "factory_pending" : order.status,
-    canEditExtraRemark: !completed,
-    items: (order.items || []).map(line => Object.assign({}, line, {
-      extraRemarkDraft: line.extraRemark || "",
-      ERMQDraft: Number(line.ERMQ || 0)
-    }))
-  });
-}
+const orderUtil = require("../../utils/order");
 
 Page({
   data: {
+    rawOrders: [],
     orders: [],
     loading: true,
     isRegionalManager: false,
     reviewingId: "",
     savingRemarkId: "",
+    keyword: "",
+    statusFilter: "all",
+    statusOptions: [
+      { label: "全部", value: "all" },
+      { label: "待大区分配", value: "regional_pending" },
+      { label: "待审核", value: "pending" },
+      { label: "已通过", value: "approved" },
+      { label: "部分配货", value: "partial_allocated" },
+      { label: "已配货", value: "allocated" },
+      { label: "新备注审核中", value: "factory_pending" }
+    ],
+    statusIndex: 0,
+    refreshedAt: "",
     statusMap: {
       regional_pending: "待大区分配",
       regional_rejected: "大区驳回",
       pending: "待审核",
       approved: "已通过",
+      contracted: "已签合同",
       partial_allocated: "部分配货",
       allocated: "已配货",
       factory_pending: "新备注审核中",
       rejected: "已驳回",
-      cancelled: "已取消"
+      cancelled: "已取消",
+      completed: "已完成",
+      complete: "已完成"
     }
   },
 
   onShow() {
     getApp().getSession(account => {
       if (!account) {
-        this.setData({ loading: false, orders: [], isRegionalManager: false });
+        this.setData({ loading: false, rawOrders: [], orders: [], isRegionalManager: false });
         return;
       }
       this.setData({ isRegionalManager: account.role === "regional_manager" });
@@ -57,33 +50,55 @@ Page({
   },
 
   onPullDownRefresh() {
-    api.getOrders()
-      .then(res => {
-        const orders = (res.data || []).filter(order => {
-          return !isHiddenOrderStatus(order.status);
-        }).map(prepareOrder);
-        this.setData({ loading: false, orders });
-        wx.stopPullDownRefresh();
-      })
-      .catch(err => {
-        wx.showToast({ title: err.message || "刷新失败", icon: "none" });
-        wx.stopPullDownRefresh();
-      });
+    this.loadOrders({ pullDown: true });
   },
 
-  loadOrders() {
-    this.setData({ loading: true });
+  loadOrders(options = {}) {
+    if (!options.pullDown) this.setData({ loading: true });
     api.getOrders()
       .then(res => {
-        const orders = (res.data || []).filter(order => {
-          return !isHiddenOrderStatus(order.status);
-        }).map(prepareOrder);
-        this.setData({ loading: false, orders });
+        const rows = Array.isArray(res.data) ? res.data : (res.data && res.data.data || []);
+        const rawOrders = rows
+          .filter(order => !orderUtil.isRejectedStatus(order.status) && !orderUtil.isCompletedStatus(order.status))
+          .map(orderUtil.prepareOrder);
+        this.setData({
+          loading: false,
+          rawOrders,
+          refreshedAt: new Date().toTimeString().slice(0, 5)
+        }, () => this.applyFilters());
+        if (options.pullDown) {
+          wx.showToast({ title: "已刷新", icon: "none" });
+        }
       })
       .catch(err => {
         this.setData({ loading: false });
         wx.showToast({ title: err.message || "加载失败", icon: "none" });
+      })
+      .finally(() => {
+        if (options.pullDown) wx.stopPullDownRefresh();
       });
+  },
+
+  applyFilters() {
+    const orders = (this.data.rawOrders || []).filter(order => {
+      return orderUtil.orderMatchesKeyword(order, this.data.keyword) &&
+        orderUtil.orderMatchesStatus(order, this.data.statusFilter);
+    });
+    this.setData({ orders });
+  },
+
+  onKeywordInput(e) {
+    this.setData({ keyword: e.detail.value }, () => this.applyFilters());
+  },
+
+  clearKeyword() {
+    this.setData({ keyword: "" }, () => this.applyFilters());
+  },
+
+  onStatusChange(e) {
+    const statusIndex = Number(e.detail.value || 0);
+    const status = this.data.statusOptions[statusIndex] || this.data.statusOptions[0];
+    this.setData({ statusIndex, statusFilter: status.value }, () => this.applyFilters());
   },
 
   onExtraRemarkInput(e) {
@@ -152,6 +167,11 @@ Page({
 
   goCreate() {
     wx.navigateTo({ url: "/pages/order-create/index" });
+  },
+
+  goDetail(e) {
+    const id = e.currentTarget.dataset.id;
+    wx.navigateTo({ url: "/pages/order-detail/index?orderNo=" + encodeURIComponent(id) });
   },
 
   goAllocate(e) {

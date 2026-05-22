@@ -2,6 +2,7 @@
 const { URL } = require("url");
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 const mysql = require("mysql2/promise");
 
 function loadEnvFile() {
@@ -33,6 +34,7 @@ loadEnvFile();
 const PORT = Number(process.env.PORT || 8001);
 const TABLE_NAME = "wechat_batch_summary";
 const ORDER_HOLD_STATUSES = ["regional_pending", "pending", "approved"];
+const PASSWORD_HASH_PREFIX = "scrypt$";
 
 function parseMysqlAddress(address) {
   const text = normalize(address);
@@ -91,6 +93,30 @@ function normalize(value) {
     return value.toISOString().slice(0, 10);
   }
   return String(value).trim();
+}
+
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString("hex");
+  const hash = crypto.scryptSync(String(password), salt, 32).toString("hex");
+  return `${PASSWORD_HASH_PREFIX}${salt}$${hash}`;
+}
+
+function verifyPassword(password, storedPassword) {
+  const stored = normalize(storedPassword);
+  if (!stored.startsWith(PASSWORD_HASH_PREFIX)) {
+    return String(password) === stored;
+  }
+  const parts = stored.split("$");
+  if (parts.length !== 3 || !parts[1] || !parts[2]) {
+    return false;
+  }
+  const hash = crypto.scryptSync(String(password), parts[1], 32);
+  const storedHash = Buffer.from(parts[2], "hex");
+  return storedHash.length === hash.length && crypto.timingSafeEqual(hash, storedHash);
+}
+
+function isPasswordHash(value) {
+  return normalize(value).startsWith(PASSWORD_HASH_PREFIX);
 }
 
 function isUnbound(row, boundCol) {
@@ -199,6 +225,14 @@ async function ensureDealerOrdersTable(connection) {
       extra_remark TEXT,
       ERMQ INT NOT NULL DEFAULT 0,
       factory_pending TINYINT(1) NOT NULL DEFAULT 0,
+      source VARCHAR(32) NOT NULL DEFAULT 'wechat',
+      last_synced_at DATETIME NULL,
+      sync_status VARCHAR(32) NOT NULL DEFAULT 'pending',
+      sync_error TEXT,
+      factory_reviewed_at DATETIME NULL,
+      factory_reviewed_by VARCHAR(128) DEFAULT '',
+      extra_remark_reviewed_at DATETIME NULL,
+      extra_remark_reviewed_by VARCHAR(128) DEFAULT '',
       delivery_date VARCHAR(64) DEFAULT '',
       remark TEXT,
       status VARCHAR(32) NOT NULL DEFAULT 'pending',
@@ -232,6 +266,14 @@ async function ensureDealerOrdersTable(connection) {
     ["extra_remark", "ALTER TABLE dealer_orders ADD COLUMN extra_remark TEXT AFTER allocated_qty"],
     ["ERMQ", "ALTER TABLE dealer_orders ADD COLUMN ERMQ INT NOT NULL DEFAULT 0 AFTER extra_remark"],
     ["factory_pending", "ALTER TABLE dealer_orders ADD COLUMN factory_pending TINYINT(1) NOT NULL DEFAULT 0 AFTER ERMQ"],
+    ["source", "ALTER TABLE dealer_orders ADD COLUMN source VARCHAR(32) NOT NULL DEFAULT 'wechat' AFTER factory_pending"],
+    ["last_synced_at", "ALTER TABLE dealer_orders ADD COLUMN last_synced_at DATETIME NULL AFTER source"],
+    ["sync_status", "ALTER TABLE dealer_orders ADD COLUMN sync_status VARCHAR(32) NOT NULL DEFAULT 'pending' AFTER last_synced_at"],
+    ["sync_error", "ALTER TABLE dealer_orders ADD COLUMN sync_error TEXT AFTER sync_status"],
+    ["factory_reviewed_at", "ALTER TABLE dealer_orders ADD COLUMN factory_reviewed_at DATETIME NULL AFTER sync_error"],
+    ["factory_reviewed_by", "ALTER TABLE dealer_orders ADD COLUMN factory_reviewed_by VARCHAR(128) DEFAULT '' AFTER factory_reviewed_at"],
+    ["extra_remark_reviewed_at", "ALTER TABLE dealer_orders ADD COLUMN extra_remark_reviewed_at DATETIME NULL AFTER factory_reviewed_by"],
+    ["extra_remark_reviewed_by", "ALTER TABLE dealer_orders ADD COLUMN extra_remark_reviewed_by VARCHAR(128) DEFAULT '' AFTER extra_remark_reviewed_at"],
     ["regional_review_status", "ALTER TABLE dealer_orders ADD COLUMN regional_review_status VARCHAR(32) NOT NULL DEFAULT 'pending' AFTER status"],
     ["regional_review_note", "ALTER TABLE dealer_orders ADD COLUMN regional_review_note TEXT AFTER regional_review_status"],
     ["regional_reviewed_by", "ALTER TABLE dealer_orders ADD COLUMN regional_reviewed_by VARCHAR(128) DEFAULT '' AFTER regional_review_note"],
@@ -304,6 +346,55 @@ async function ensureDealerApplicationsTable(connection) {
 
 }
 
+async function ensureSchemaMigrationsTable(connection) {
+  await connection.query(`
+    CREATE TABLE IF NOT EXISTS schema_migrations (
+      version VARCHAR(128) NOT NULL PRIMARY KEY,
+      applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `);
+}
+
+async function ensureDealerOrderSyncEventsTable(connection) {
+  await connection.query(`
+    CREATE TABLE IF NOT EXISTS dealer_order_sync_events (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      event_id VARCHAR(64) NOT NULL UNIQUE,
+      order_no VARCHAR(64) NOT NULL,
+      event_type VARCHAR(64) NOT NULL,
+      source VARCHAR(32) NOT NULL DEFAULT 'wechat',
+      payload_json JSON NOT NULL,
+      status VARCHAR(32) NOT NULL DEFAULT 'pending',
+      attempts INT NOT NULL DEFAULT 0,
+      last_error TEXT,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      acked_at DATETIME NULL,
+      KEY idx_sync_events_order (order_no),
+      KEY idx_sync_events_status (status, id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `);
+}
+
+async function ensureSupportSchema(connection) {
+  await ensureSchemaMigrationsTable(connection);
+  await ensureDealerOrderSyncEventsTable(connection);
+  await connection.query(
+    "INSERT IGNORE INTO schema_migrations (version) VALUES (?)",
+    ["20260522_001_dealer_order_sync_foundation"]
+  );
+}
+
+async function createDealerOrderSyncEvent(connection, orderNo, eventType, payload = {}, source = "wechat") {
+  const eventId = crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString("hex");
+  await connection.query(
+    `INSERT INTO dealer_order_sync_events
+      (event_id, order_no, event_type, source, payload_json)
+     VALUES (?, ?, ?, ?, CAST(? AS JSON))`,
+    [eventId, orderNo, eventType, source, JSON.stringify(payload, null, 0)]
+  );
+  return eventId;
+}
+
 async function readJsonBody(req) {
   return await new Promise((resolve, reject) => {
     let body = "";
@@ -351,10 +442,60 @@ function requireText(value, fieldName) {
   return text;
 }
 
+function accountIdFromToken(req) {
+  const header = normalize(req && req.headers && req.headers.authorization);
+  const match = header.match(/^Bearer\s+(.+)$/i);
+  const token = match ? match[1] : "";
+  if (token === "local-admin-token" || token === "mock-admin-token") return "admin";
+  if (token.startsWith("dealer-token-")) return token.slice("dealer-token-".length);
+  if (token.startsWith("mock-dealer-token-")) return token.slice("mock-dealer-token-".length);
+  return "";
+}
+
+function requireAdminRequest(req) {
+  if (accountIdFromToken(req) !== "admin") {
+    const err = new Error("无管理员权限");
+    err.statusCode = 403;
+    throw err;
+  }
+}
+
+async function loadAccountByToken(req) {
+  const accountId = accountIdFromToken(req);
+  if (!accountId) {
+    const err = new Error("请先登录");
+    err.statusCode = 401;
+    throw err;
+  }
+  if (accountId === "admin") {
+    return { id: "admin", role: "admin", name: "系统管理员", phone: "admin", contactName: "系统管理员" };
+  }
+  const connection = await mysql.createConnection(dbConfig);
+  try {
+    await ensureDealerApplicationsTable(connection);
+    const [rows] = await connection.query(
+      `SELECT dealer_code AS id, company_name AS name, phone, contact_name AS contactName,
+              region, role, regional_manager_name AS regionalManagerName, status
+       FROM dealer_applications
+       WHERE dealer_code = ?
+       LIMIT 1`,
+      [accountId]
+    );
+    if (!rows.length || rows[0].status !== "approved") {
+      const err = new Error("账号不存在或未审核通过");
+      err.statusCode = 403;
+      throw err;
+    }
+    return rows[0];
+  } finally {
+    await connection.end();
+  }
+}
+
 async function createDealerApplication(payload) {
   const companyName = requireText(payload.companyName, "经销商公司");
   const phone = requireText(payload.phone, "手机号");
-  const password = requireText(payload.password, "登录密码");
+  const password = hashPassword(requireText(payload.password, "登录密码"));
   const contactName = requireText(payload.contactName, "姓名");
   const region = requireText(payload.region, "所在地区");
   const role = normalize(payload.role) === "regional_manager" ? "regional_manager" : "dealer";
@@ -440,10 +581,16 @@ async function loginDealer(payload) {
     }
 
     const dealer = rows[0];
-    if (password !== normalize(dealer.password)) {
+    if (!verifyPassword(password, dealer.password)) {
       const err = new Error("密码错误");
       err.statusCode = 401;
       throw err;
+    }
+    if (!isPasswordHash(dealer.password)) {
+      await connection.query(
+        "UPDATE dealer_applications SET password = ? WHERE dealer_code = ?",
+        [hashPassword(password), dealer.id]
+      );
     }
     if (dealer.status !== "approved") {
       const err = new Error("账号还未审核通过，暂不能登录");
@@ -565,7 +712,7 @@ async function deleteDealerApplication(id) {
 
 async function updateDealerApplicationPassword(id, password) {
   const dealerCode = requireText(id, "经销商申请ID");
-  const nextPassword = requireText(password, "新密码");
+  const nextPassword = hashPassword(requireText(password, "新密码"));
   const connection = await mysql.createConnection(dbConfig);
   try {
     await ensureDealerApplicationsTable(connection);
@@ -710,6 +857,7 @@ async function createDealerOrder(payload) {
   const connection = await mysql.createConnection(dbConfig);
   try {
     await ensureDealerOrdersTable(connection);
+    await ensureSupportSchema(connection);
     await connection.beginTransaction();
     const initialStatus = allItemsHaveBatch ? "pending" : "regional_pending";
     const regionalReviewStatus = allItemsHaveBatch ? "approved" : "pending";
@@ -742,6 +890,11 @@ async function createDealerOrder(payload) {
         ]
       );
     }
+    await createDealerOrderSyncEvent(connection, order.orderNo, "dealer_order.created", {
+      orderNo: order.orderNo,
+      status: allItemsHaveBatch ? "pending" : "regional_pending",
+      itemCount: items.length
+    });
     await connection.commit();
   } catch (err) {
     try { await connection.rollback(); } catch (rollbackErr) {}
@@ -774,6 +927,11 @@ async function listDealerOrders(filters = {}) {
       where.push("regional_manager_name = ?");
       params.push(filters.regionalManagerName);
     }
+    const keyword = normalize(filters.keyword).toLowerCase();
+    const statusFilter = normalize(filters.status).toLowerCase();
+    const page = Math.max(1, Math.trunc(Number(filters.page || 1)));
+    const pageSize = Math.min(200, Math.max(1, Math.trunc(Number(filters.pageSize || filters.page_size || 200))));
+    const usePaging = Boolean(filters.page || filters.pageSize || filters.page_size || keyword || statusFilter);
     const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
     const [rows] = await connection.query(
       `SELECT
@@ -801,6 +959,16 @@ async function listDealerOrders(filters = {}) {
         regional_review_note AS regionalReviewNote,
         regional_reviewed_by AS regionalReviewedBy,
         DATE_FORMAT(regional_reviewed_at, '%Y-%m-%d %H:%i:%s') AS regionalReviewedAt,
+        contract_no AS contractNo,
+        v7_order_no AS v7OrderNo,
+        sync_status AS syncStatus,
+        sync_error AS syncError,
+        source,
+        DATE_FORMAT(last_synced_at, '%Y-%m-%d %H:%i:%s') AS lastSyncedAt,
+        DATE_FORMAT(factory_reviewed_at, '%Y-%m-%d %H:%i:%s') AS factoryReviewedAt,
+        factory_reviewed_by AS factoryReviewedBy,
+        DATE_FORMAT(extra_remark_reviewed_at, '%Y-%m-%d %H:%i:%s') AS extraRemarkReviewedAt,
+        extra_remark_reviewed_by AS extraRemarkReviewedBy,
         DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') AS createdAt
        FROM dealer_orders
        ${whereSql}
@@ -818,7 +986,7 @@ async function listDealerOrders(filters = {}) {
       order.quantity += Number(row.quantity || 0);
     }
 
-    return Array.from(grouped.values()).map(order => {
+    let orders = Array.from(grouped.values()).map(order => {
       const allStatuses = order.items.map(item => normalize(item.status).toLowerCase()).filter(Boolean);
       const reviewStatuses = order.items.map(item => normalize(item.regionalReviewStatus).toLowerCase()).filter(Boolean);
       const anyRejected = allStatuses.some(isRejectedStatus) || reviewStatuses.some(isRejectedStatus);
@@ -856,6 +1024,34 @@ async function listDealerOrders(filters = {}) {
         batchNo: Array.from(new Set(order.items.map(item => item.batchNo || "-"))).join(" / ")
       });
     });
+    if (keyword) {
+      orders = orders.filter(order => {
+        const haystack = [
+          order.id, order.customerName, order.contactName, order.contactPhone, order.dealerName,
+          order.regionalManagerName, order.remark, order.regionalReviewNote, order.model, order.batchNo
+        ].concat((order.items || []).flatMap(item => [
+          item.model, item.batchNo, item.eta, item.inventoryType, item.remark, item.extraRemark
+        ])).map(normalize).join(" ").toLowerCase();
+        return haystack.includes(keyword);
+      });
+    }
+    if (statusFilter) {
+      orders = orders.filter(order => {
+        if (statusFilter === "factory_pending") {
+          return Number(order.factoryPending || 0) === 1 && !isCompletedOrderStatus(order.status);
+        }
+        return normalize(order.status).toLowerCase() === statusFilter;
+      });
+    }
+    if (usePaging) {
+      return {
+        data: orders.slice((page - 1) * pageSize, page * pageSize),
+        total: orders.length,
+        page,
+        pageSize
+      };
+    }
+    return orders;
   } finally {
     await connection.end();
   }
@@ -871,7 +1067,7 @@ function isCompletedOrderStatus(status) {
   return value === "complete" || value === "completed";
 }
 
-async function updateDealerOrderExtraRemarks(orderNo, payload) {
+async function updateDealerOrderExtraRemarks(orderNo, payload, account = null) {
   const orderId = requireText(orderNo, "订单号");
   const rawItems = Array.isArray(payload.items) ? payload.items : [];
   if (!rawItems.length) {
@@ -883,16 +1079,30 @@ async function updateDealerOrderExtraRemarks(orderNo, payload) {
   const connection = await mysql.createConnection(dbConfig);
   try {
     await ensureDealerOrdersTable(connection);
+    await ensureSupportSchema(connection);
     await connection.beginTransaction();
 
     const [rows] = await connection.query(
-      "SELECT line_no, quantity, status, extra_remark, ERMQ, factory_pending FROM dealer_orders WHERE order_no = ? ORDER BY line_no ASC FOR UPDATE",
+      "SELECT line_no, dealer_id, regional_manager_name, quantity, status, extra_remark, ERMQ, factory_pending FROM dealer_orders WHERE order_no = ? ORDER BY line_no ASC FOR UPDATE",
       [orderId]
     );
     if (!rows.length) {
       const err = new Error("订单不存在");
       err.statusCode = 404;
       throw err;
+    }
+    if (account && account.role !== "admin") {
+      const allowed = rows.some(row => {
+        if (account.role === "regional_manager") {
+          return normalize(row.regional_manager_name) === normalize(account.contactName || account.name) || normalize(row.dealer_id) === normalize(account.id);
+        }
+        return normalize(row.dealer_id) === normalize(account.id);
+      });
+      if (!allowed) {
+        const err = new Error("无权修改该订单");
+        err.statusCode = 403;
+        throw err;
+      }
     }
     const statuses = rows.map(row => normalize(row.status).toLowerCase());
     if (statuses.length && statuses.every(isCompletedOrderStatus)) {
@@ -933,6 +1143,10 @@ async function updateDealerOrderExtraRemarks(orderNo, payload) {
       "UPDATE dealer_orders SET factory_pending = 1 WHERE order_no = ?",
       [orderId]
     );
+    await createDealerOrderSyncEvent(connection, orderId, "dealer_order.extra_remark.updated", {
+      orderNo: orderId,
+      items: rawItems
+    });
 
     await connection.commit();
     return {
@@ -970,6 +1184,7 @@ async function reviewDealerOrderByRegionalManager(orderNo, payload) {
   const connection = await mysql.createConnection(dbConfig);
   try {
     await ensureDealerOrdersTable(connection);
+    await ensureSupportSchema(connection);
     const where = ["order_no = ?", "status = 'regional_pending'"];
     const params = [orderId];
     if (regionalManagerName) {
@@ -991,6 +1206,12 @@ async function reviewDealerOrderByRegionalManager(orderNo, payload) {
       err.statusCode = 404;
       throw err;
     }
+    await createDealerOrderSyncEvent(connection, orderId, nextStatus === "approved" ? "dealer_order.regional_approved" : "dealer_order.regional_rejected", {
+      orderNo: orderId,
+      status: finalStatus,
+      reviewedBy: reviewerName,
+      note
+    });
     return {
       id: orderId,
       status: finalStatus,
@@ -1017,6 +1238,7 @@ async function allocateDealerOrderByRegionalManager(orderNo, payload) {
   const connection = await mysql.createConnection(dbConfig);
   try {
     await ensureDealerOrdersTable(connection);
+    await ensureSupportSchema(connection);
     await connection.beginTransaction();
 
     const where = ["order_no = ?", "status = 'regional_pending'"];
@@ -1148,6 +1370,10 @@ async function allocateDealerOrderByRegionalManager(orderNo, payload) {
       );
     }
 
+    await createDealerOrderSyncEvent(connection, orderId, "dealer_order.regional_allocated", {
+      orderNo: orderId,
+      itemCount: allocations.length
+    });
     await connection.commit();
     return {
       id: orderId,
@@ -1476,6 +1702,7 @@ const server = http.createServer(async (req, res) => {
       return;
     }
     if (url.pathname === "/api/dealer/admin/dealers/applications" && req.method === "GET") {
+      requireAdminRequest(req);
       sendJson(res, 200, await listDealerApplications());
       return;
     }
@@ -1485,48 +1712,87 @@ const server = http.createServer(async (req, res) => {
     }
     const reviewMatch = url.pathname.match(/^\/api\/dealer\/admin\/dealers\/([^/]+)\/review$/);
     if (reviewMatch && req.method === "POST") {
+      requireAdminRequest(req);
       const payload = await readJsonBody(req);
       sendJson(res, 200, await reviewDealerApplication(decodeURIComponent(reviewMatch[1]), payload.status));
       return;
     }
     const passwordMatch = url.pathname.match(/^\/api\/dealer\/admin\/dealers\/([^/]+)\/password$/);
     if (passwordMatch && req.method === "POST") {
+      requireAdminRequest(req);
       const payload = await readJsonBody(req);
       sendJson(res, 200, await updateDealerApplicationPassword(decodeURIComponent(passwordMatch[1]), payload.password));
       return;
     }
     const deleteDealerMatch = url.pathname.match(/^\/api\/dealer\/admin\/dealers\/([^/]+)$/);
     if (deleteDealerMatch && req.method === "DELETE") {
+      requireAdminRequest(req);
       sendJson(res, 200, await deleteDealerApplication(decodeURIComponent(deleteDealerMatch[1])));
       return;
     }
     if (url.pathname === "/api/dealer/orders" && req.method === "POST") {
+      const account = await loadAccountByToken(req);
       const payload = await readJsonBody(req);
+      payload.dealer = Object.assign({}, payload.dealer || {}, account);
       sendJson(res, 200, await createDealerOrder(payload));
       return;
     }
     const regionalOrderReviewMatch = url.pathname.match(/^\/api\/dealer\/orders\/([^/]+)\/regional-review$/);
     if (regionalOrderReviewMatch && req.method === "POST") {
+      const account = await loadAccountByToken(req);
+      if (account.role !== "regional_manager") {
+        const err = new Error("无大区经理权限");
+        err.statusCode = 403;
+        throw err;
+      }
       const payload = await readJsonBody(req);
+      payload.regionalManagerName = account.contactName || account.name || "";
+      payload.reviewerName = account.contactName || account.name || account.phone || "";
       sendJson(res, 200, await reviewDealerOrderByRegionalManager(decodeURIComponent(regionalOrderReviewMatch[1]), payload));
       return;
     }
     const regionalOrderAllocateMatch = url.pathname.match(/^\/api\/dealer\/orders\/([^/]+)\/regional-allocate$/);
     if (regionalOrderAllocateMatch && req.method === "POST") {
+      const account = await loadAccountByToken(req);
+      if (account.role !== "regional_manager") {
+        const err = new Error("无大区经理权限");
+        err.statusCode = 403;
+        throw err;
+      }
       const payload = await readJsonBody(req);
+      payload.regionalManagerName = account.contactName || account.name || "";
+      payload.reviewerName = account.contactName || account.name || account.phone || "";
       sendJson(res, 200, await allocateDealerOrderByRegionalManager(decodeURIComponent(regionalOrderAllocateMatch[1]), payload));
       return;
     }
     const extraRemarkMatch = url.pathname.match(/^\/api\/dealer\/orders\/([^/]+)\/extra-remarks$/);
     if (extraRemarkMatch && req.method === "POST") {
+      const account = await loadAccountByToken(req);
       const payload = await readJsonBody(req);
-      sendJson(res, 200, await updateDealerOrderExtraRemarks(decodeURIComponent(extraRemarkMatch[1]), payload));
+      sendJson(res, 200, await updateDealerOrderExtraRemarks(decodeURIComponent(extraRemarkMatch[1]), payload, account));
       return;
     }
     if (url.pathname === "/api/dealer/orders" && req.method === "GET") {
+      const account = await loadAccountByToken(req);
+      const orderFilters = {
+        status: url.searchParams.get("status"),
+        keyword: url.searchParams.get("keyword"),
+        page: url.searchParams.get("page"),
+        pageSize: url.searchParams.get("pageSize")
+      };
+      if (account.role === "regional_manager") {
+        orderFilters.dealerId = account.id;
+        orderFilters.regionalManagerName = account.contactName || account.name || "";
+      } else if (account.role !== "admin") {
+        orderFilters.dealerId = account.id;
+      }
       sendJson(res, 200, await listDealerOrders({
-        dealerId: url.searchParams.get("dealerId"),
-        regionalManagerName: url.searchParams.get("regionalManagerName")
+        dealerId: orderFilters.dealerId,
+        regionalManagerName: orderFilters.regionalManagerName,
+        status: orderFilters.status,
+        keyword: orderFilters.keyword,
+        page: orderFilters.page,
+        pageSize: orderFilters.pageSize
       }));
       return;
     }

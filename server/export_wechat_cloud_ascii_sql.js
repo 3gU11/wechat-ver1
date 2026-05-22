@@ -160,6 +160,14 @@ async function main() {
   \`extra_remark\` text,
   \`ERMQ\` int NOT NULL DEFAULT 0,
   \`factory_pending\` tinyint(1) NOT NULL DEFAULT 0,
+  \`source\` varchar(32) NOT NULL DEFAULT 'wechat',
+  \`last_synced_at\` datetime DEFAULT NULL,
+  \`sync_status\` varchar(32) NOT NULL DEFAULT 'pending',
+  \`sync_error\` text,
+  \`factory_reviewed_at\` datetime DEFAULT NULL,
+  \`factory_reviewed_by\` varchar(128) DEFAULT '',
+  \`extra_remark_reviewed_at\` datetime DEFAULT NULL,
+  \`extra_remark_reviewed_by\` varchar(128) DEFAULT '',
   \`delivery_date\` varchar(64) DEFAULT '',
   \`remark\` text,
   \`status\` varchar(32) NOT NULL DEFAULT 'pending',
@@ -177,6 +185,32 @@ async function main() {
   KEY \`idx_status\` (\`status\`),
   KEY \`idx_batch_model_status\` (\`batch_no\`, \`model\`, \`status\`),
   KEY \`idx_created_at\` (\`created_at\`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;`);
+
+  output.push("DROP TABLE IF EXISTS `schema_migrations`;");
+  output.push(`CREATE TABLE \`schema_migrations\` (
+  \`version\` varchar(128) NOT NULL,
+  \`applied_at\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (\`version\`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;`);
+
+  output.push("DROP TABLE IF EXISTS `dealer_order_sync_events`;");
+  output.push(`CREATE TABLE \`dealer_order_sync_events\` (
+  \`id\` bigint unsigned NOT NULL AUTO_INCREMENT,
+  \`event_id\` varchar(64) NOT NULL,
+  \`order_no\` varchar(64) NOT NULL,
+  \`event_type\` varchar(64) NOT NULL,
+  \`source\` varchar(32) NOT NULL DEFAULT 'wechat',
+  \`payload_json\` json NOT NULL,
+  \`status\` varchar(32) NOT NULL DEFAULT 'pending',
+  \`attempts\` int NOT NULL DEFAULT 0,
+  \`last_error\` text,
+  \`created_at\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  \`acked_at\` datetime DEFAULT NULL,
+  PRIMARY KEY (\`id\`),
+  UNIQUE KEY \`event_id\` (\`event_id\`),
+  KEY \`idx_sync_events_order\` (\`order_no\`),
+  KEY \`idx_sync_events_status\` (\`status\`, \`id\`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;`);
 
   output.push("DROP TABLE IF EXISTS `model_dictionary`;");

@@ -1,14 +1,11 @@
 const api = require("../../utils/api");
-
-const COMPLETED_STATUSES = ["complete", "completed"];
-
-function isCompletedStatus(status) {
-  return COMPLETED_STATUSES.indexOf(String(status || "").toLowerCase()) !== -1;
-}
+const orderUtil = require("../../utils/order");
 
 Page({
   data: {
+    rawOrders: [],
     orders: [],
+    keyword: "",
     loading: true,
     statusMap: {
       complete: "已完成",
@@ -19,7 +16,7 @@ Page({
   onShow() {
     getApp().getSession(account => {
       if (!account) {
-        this.setData({ loading: false, orders: [] });
+        this.setData({ loading: false, rawOrders: [], orders: [] });
         wx.redirectTo({ url: "/pages/auth/login/index" });
         return;
       }
@@ -31,12 +28,31 @@ Page({
     this.setData({ loading: true });
     api.getOrders()
       .then(res => {
-        const orders = (res.data || []).filter(order => isCompletedStatus(order.status));
-        this.setData({ loading: false, orders });
+        const rows = Array.isArray(res.data) ? res.data : (res.data && res.data.data || []);
+        const rawOrders = rows.filter(order => orderUtil.isCompletedStatus(order.status)).map(orderUtil.prepareOrder);
+        this.setData({ loading: false, rawOrders }, () => this.applyFilters());
       })
       .catch(err => {
         this.setData({ loading: false });
         wx.showToast({ title: err.message || "加载失败", icon: "none" });
       });
+  },
+
+  applyFilters() {
+    const orders = (this.data.rawOrders || []).filter(order => orderUtil.orderMatchesKeyword(order, this.data.keyword));
+    this.setData({ orders });
+  },
+
+  onKeywordInput(e) {
+    this.setData({ keyword: e.detail.value }, () => this.applyFilters());
+  },
+
+  clearKeyword() {
+    this.setData({ keyword: "" }, () => this.applyFilters());
+  },
+
+  goDetail(e) {
+    const id = e.currentTarget.dataset.id;
+    wx.navigateTo({ url: "/pages/order-detail/index?orderNo=" + encodeURIComponent(id) });
   }
 });

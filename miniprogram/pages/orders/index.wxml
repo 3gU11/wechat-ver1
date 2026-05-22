@@ -4,6 +4,17 @@
     <button class="mini-btn" bindtap="goCreate">去购物车</button>
   </view>
 
+  <view class="filter-panel">
+    <view class="search-row">
+      <input class="search-input" value="{{keyword}}" placeholder="搜索订单号、客户、机型、批次、备注" bindinput="onKeywordInput" />
+      <button wx:if="{{keyword}}" class="clear-search" bindtap="clearKeyword">清除</button>
+    </view>
+    <picker mode="selector" range="{{statusOptions}}" range-key="label" value="{{statusIndex}}" bindchange="onStatusChange">
+      <view class="status-filter">状态：{{statusOptions[statusIndex].label}}</view>
+    </picker>
+    <view wx:if="{{refreshedAt}}" class="refresh-time">最近刷新：{{refreshedAt}}</view>
+  </view>
+
   <view class="order-list">
     <view class="card order-card" wx:for="{{orders}}" wx:for-index="orderIndex" wx:key="id">
       <view class="order-top">
@@ -20,6 +31,7 @@
         <view>{{line.model}} · {{line.quantity}} 台</view>
         <view wx:if="{{line.batchNo}}">{{line.inventoryType === 'finished' ? '成品现货' : (line.inventoryType === 'heightened' ? '加高' : '在制')}} · {{line.batchNo}} · {{line.eta || '-'}}</view>
         <view wx:else>待大区经理分配具体批次</view>
+        <view wx:if="{{item.displayStatus === 'factory_pending'}}" class="pending-label">等待工厂确认</view>
         <view class="extra-row">
           <text class="extra-label">附加备注</text>
           <input
@@ -39,10 +51,15 @@
           </view>
           <text wx:else class="extra-qty">数量：{{line.ERMQ || 0}}</text>
         </view>
+        <view wx:if="{{item.canEditExtraRemark && line.extraRemarkDraft && !line.ERMQDraft}}" class="extra-tip">数量留空将默认全部</view>
       </view>
       <view class="time">提交时间：{{item.createdAt}}</view>
       <view wx:if="{{item.canEditExtraRemark}}" class="remark-actions">
         <button class="remark-save-btn" data-order-index="{{orderIndex}}" loading="{{savingRemarkId === item.id}}" disabled="{{savingRemarkId !== ''}}" bindtap="saveExtraRemarks">保存附加备注</button>
+        <button class="detail-btn" data-id="{{item.id}}" bindtap="goDetail">查看详情</button>
+      </view>
+      <view wx:else class="remark-actions">
+        <button class="detail-btn" data-id="{{item.id}}" bindtap="goDetail">查看详情</button>
       </view>
       <view wx:if="{{isRegionalManager && item.status === 'regional_pending'}}" class="actions">
         <button class="reject-btn" data-id="{{item.id}}" data-status="rejected" loading="{{reviewingId === item.id}}" disabled="{{reviewingId !== ''}}" bindtap="reviewOrder">驳回</button>

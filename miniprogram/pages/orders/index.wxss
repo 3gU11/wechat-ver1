@@ -23,6 +23,49 @@
   flex-direction: column;
 }
 
+.filter-panel {
+  margin: 18rpx 0;
+  padding: 18rpx;
+  border: 1rpx solid #d8e4f5;
+  border-radius: 12rpx;
+  background: #ffffff;
+}
+
+.search-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.search-input {
+  flex: 1;
+  min-width: 0;
+  height: 64rpx;
+  padding: 0 18rpx;
+  border: 1rpx solid #d8e4f5;
+  border-radius: 8rpx;
+  font-size: 25rpx;
+  box-sizing: border-box;
+}
+
+.clear-search {
+  width: 92rpx;
+  height: 64rpx;
+  line-height: 64rpx;
+  padding: 0;
+  border-radius: 8rpx;
+  background: #eef4ff;
+  color: #1f4f9a;
+  font-size: 24rpx;
+}
+
+.status-filter,
+.refresh-time {
+  margin-top: 12rpx;
+  color: #66758f;
+  font-size: 24rpx;
+}
+
 .order-card {
   padding: 24rpx;
 }
@@ -73,6 +116,13 @@
   display: flex;
   align-items: center;
   gap: 10rpx;
+}
+
+.extra-tip,
+.pending-label {
+  margin-top: 8rpx;
+  color: #92400e;
+  font-size: 23rpx;
 }
 
 .extra-label {
@@ -160,10 +210,12 @@
 .remark-actions {
   display: flex;
   justify-content: flex-end;
+  gap: 14rpx;
   margin-top: 18rpx;
 }
 
-.remark-save-btn {
+.remark-save-btn,
+.detail-btn {
   width: 190rpx;
   height: 60rpx;
   line-height: normal;
@@ -175,6 +227,11 @@
   color: #ffffff;
   font-size: 24rpx;
   font-weight: 700;
+}
+
+.detail-btn {
+  background: #eef4ff;
+  color: #1f4f9a;
 }
 
 .approve-btn,

@@ -1,6 +1,13 @@
 <view class="page">
   <view class="section-title">历史订单</view>
 
+  <view class="filter-panel">
+    <view class="search-row">
+      <input class="search-input" value="{{keyword}}" placeholder="搜索订单号、客户、机型、批次、备注" bindinput="onKeywordInput" />
+      <button wx:if="{{keyword}}" class="clear-search" bindtap="clearKeyword">清除</button>
+    </view>
+  </view>
+
   <view class="history-list">
     <view class="card order-card" wx:for="{{orders}}" wx:key="id">
       <view class="order-top">
@@ -27,6 +34,9 @@
       </view>
 
       <view class="time">提交时间：{{item.createdAt}}</view>
+      <view class="actions">
+        <button class="detail-btn" data-id="{{item.id}}" bindtap="goDetail">查看详情</button>
+      </view>
     </view>
   </view>
 
