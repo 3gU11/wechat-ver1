@@ -37,6 +37,7 @@ const TABLE_NAME = "wechat_batch_summary";
 const ORDER_HOLD_STATUSES = ["regional_pending", "pending", "approved"];
 const PASSWORD_HASH_PREFIX = "scrypt$";
 const AUTH_TOKEN_PREFIX = "rjv1.";
+const API_BUILD = "wechat-login-20260522";
 
 function parseMysqlAddress(address) {
   const text = normalize(address);
@@ -1898,6 +1899,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   const url = new URL(req.url, `http://${req.headers.host}`);
+  console.log(`[dealer-api] ${req.method} ${url.pathname}`);
   try {
     if (url.pathname === "/api/dealer/auth/login" && req.method === "POST") {
       const payload = await readJsonBody(req);
@@ -2010,7 +2012,7 @@ const server = http.createServer(async (req, res) => {
       return;
     }
     if (url.pathname === "/api/dealer/health") {
-      sendJson(res, 200, { status: "ok", database: dbConfig.database, table: TABLE_NAME });
+      sendJson(res, 200, { status: "ok", build: API_BUILD, database: dbConfig.database, table: TABLE_NAME });
       return;
     }
     if (url.pathname === "/api/dealer/debug/columns") {
@@ -2031,6 +2033,7 @@ const server = http.createServer(async (req, res) => {
     }
     sendJson(res, 404, { message: "Not Found" });
   } catch (err) {
+    console.error(`[dealer-api] ${req.method} ${url.pathname} failed:`, err && err.stack ? err.stack : err);
     sendJson(res, err.statusCode || 500, { message: err.message });
   }
 });
