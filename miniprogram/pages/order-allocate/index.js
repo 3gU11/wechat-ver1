@@ -231,6 +231,7 @@ Page({
       .then(() => {
         this.setData({ submitting: false });
         wx.showToast({ title: "已提交工厂审核" });
+        api.refreshRegionalPendingBadge();
         wx.navigateBack();
       })
       .catch(err => {

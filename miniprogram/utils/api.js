@@ -126,6 +126,52 @@ function isAdmin() {
   return !!account && account.role === "admin";
 }
 
+function setOrdersTabBadge(count) {
+  if (typeof wx === "undefined" || !wx.setTabBarBadge || !wx.removeTabBarBadge) {
+    return;
+  }
+  const tabIndex = 2;
+  const value = Number(count || 0);
+  try {
+    if (value > 0) {
+      wx.setTabBarBadge({
+        index: tabIndex,
+        text: value > 99 ? "99+" : String(value)
+      });
+      return;
+    }
+    wx.removeTabBarBadge({ index: tabIndex });
+  } catch (err) {
+    // Tab bar APIs throw when called before a tab page is ready.
+  }
+}
+
+function refreshRegionalPendingBadge() {
+  const account = getCurrentAccount();
+  if (!account || account.role !== "regional_manager") {
+    setOrdersTabBadge(0);
+    return Promise.resolve(0);
+  }
+
+  return request({
+    url: "/orders",
+    data: {
+      dealerId: account.id || "",
+      regionalManagerName: account.contactName || account.name || "",
+      regionalOnly: 1,
+      status: "regional_pending",
+      page: 1,
+      pageSize: 1
+    }
+  }).then(data => {
+    const count = Array.isArray(data) ? data.length : Number(data && data.total || 0);
+    setOrdersTabBadge(count);
+    return count;
+  }).catch(() => {
+    return 0;
+  });
+}
+
 function getAccountRegionalManagerName(account) {
   if (!account) return "";
   if (account.role === "regional_manager") {
@@ -480,6 +526,7 @@ module.exports = {
   login,
   wechatLogin,
   registerDealer,
+  refreshRegionalPendingBadge,
   getRegionalManagers,
   getDealerApplications,
   reviewDealerApplication,

@@ -1,4 +1,6 @@
-﻿Page({
+const api = require("../../utils/api");
+
+Page({
   data: {
     loading: false,
     account: null,
@@ -12,6 +14,7 @@
 
   onShow() {
     getApp().getSession(account => {
+      api.refreshRegionalPendingBadge();
       if (!account) {
         this.setData({
           account: null,
@@ -36,7 +39,6 @@
   wechatLogin() {
     if (this.data.submitting) return;
     this.setData({ submitting: true, statusText: "正在获取微信登录凭证..." });
-    const api = require("../../utils/api");
 
     wx.login({
       success: loginRes => {
@@ -58,6 +60,7 @@
                 isRegionalManager: data.account.role === "regional_manager",
                 statusText: "登录成功"
               });
+              api.refreshRegionalPendingBadge();
               this.loadModels();
               return;
             }
@@ -91,7 +94,6 @@
   },
 
   loadModels() {
-    const api = require("../../utils/api");
     const fallbackModels = [
       { model: "DK7735", available: 15, finished: 6, wip: 9 },
       { model: "DK7745", available: 19, finished: 8, wip: 11 },

@@ -1143,7 +1143,11 @@ async function listDealerOrders(filters = {}) {
     await ensureDealerOrdersTable(connection);
     const where = [];
     const params = [];
-    if (filters.dealerId && filters.regionalManagerName) {
+    const regionalOnly = ["1", "true", "yes"].includes(normalize(filters.regionalOnly).toLowerCase());
+    if (regionalOnly && filters.regionalManagerName) {
+      where.push("regional_manager_name = ?");
+      params.push(filters.regionalManagerName);
+    } else if (filters.dealerId && filters.regionalManagerName) {
       where.push("(dealer_id = ? OR regional_manager_name = ?)");
       params.push(filters.dealerId, filters.regionalManagerName);
     } else if (filters.dealerId) {
@@ -2010,7 +2014,8 @@ const server = http.createServer(async (req, res) => {
         status: url.searchParams.get("status"),
         keyword: url.searchParams.get("keyword"),
         page: url.searchParams.get("page"),
-        pageSize: url.searchParams.get("pageSize")
+        pageSize: url.searchParams.get("pageSize"),
+        regionalOnly: url.searchParams.get("regionalOnly")
       };
       if (account.role === "regional_manager") {
         orderFilters.dealerId = account.id;
@@ -2024,7 +2029,8 @@ const server = http.createServer(async (req, res) => {
         status: orderFilters.status,
         keyword: orderFilters.keyword,
         page: orderFilters.page,
-        pageSize: orderFilters.pageSize
+        pageSize: orderFilters.pageSize,
+        regionalOnly: orderFilters.regionalOnly
       }));
       return;
     }

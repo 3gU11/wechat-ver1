@@ -1,3 +1,5 @@
+const api = require("../../utils/api");
+
 Page({
   data: {
     account: null,
@@ -6,6 +8,7 @@ Page({
 
   onShow() {
     getApp().getSession(account => {
+      api.refreshRegionalPendingBadge();
       const displayName = account && (account.name || account.contact_name || account.contactName || account.phone);
       const avatarText = displayName ? Array.from(String(displayName).trim())[0] || "经" : "经";
 
@@ -26,6 +29,7 @@ Page({
 
   logout() {
     getApp().clearSession();
+    api.refreshRegionalPendingBadge();
     wx.redirectTo({ url: "/pages/auth/login/index" });
   }
 });

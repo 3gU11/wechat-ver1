@@ -40,6 +40,7 @@ Page({
 
   onShow() {
     getApp().getSession(account => {
+      api.refreshRegionalPendingBadge();
       if (!account) {
         this.setData({ loading: false, rawOrders: [], orders: [], isRegionalManager: false });
         return;
@@ -66,6 +67,7 @@ Page({
           rawOrders,
           refreshedAt: new Date().toTimeString().slice(0, 5)
         }, () => this.applyFilters());
+        api.refreshRegionalPendingBadge();
         if (options.pullDown) {
           wx.showToast({ title: "已刷新", icon: "none" });
         }
@@ -155,6 +157,7 @@ Page({
           .then(() => {
             wx.showToast({ title: "附加备注已保存" });
             this.setData({ savingRemarkId: "" });
+            api.refreshRegionalPendingBadge();
             this.loadOrders();
           })
           .catch(err => {
@@ -197,6 +200,7 @@ Page({
           .then(() => {
             this.setData({ reviewingId: "" });
             wx.showToast({ title: status === "approved" ? "已通过" : "已驳回" });
+            api.refreshRegionalPendingBadge();
             this.loadOrders();
           })
           .catch(err => {

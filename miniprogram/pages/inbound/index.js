@@ -30,6 +30,7 @@ Page({
   onShow() {
     this.refreshCartCount();
     getApp().getSession(account => {
+      api.refreshRegionalPendingBadge();
       if (!account) {
         this.setData({ loading: false, isLoggedIn: false, canViewInbound: false, accountName: "", loadError: "", plans: [] });
         return;
