@@ -158,6 +158,10 @@ function refreshRegionalPendingBadge(options = {}) {
     data: {
       dealerId: account.id || "",
       regionalManagerName: account.contactName || account.name || "",
+      regionalManagerId: account.id || "",
+      regionalManagerCompanyName: account.name || "",
+      regionalManagerContactName: account.contactName || "",
+      regionalManagerPhone: account.phone || "",
       regionalOnly: 1,
       status: "regional_pending",
       page: 1,
@@ -168,6 +172,7 @@ function refreshRegionalPendingBadge(options = {}) {
     if (!Number.isFinite(count)) {
       return 0;
     }
+    console.log("[dealer-api] regional pending badge count", count);
     setOrdersTabBadge(count);
     return count;
   }).catch(() => {

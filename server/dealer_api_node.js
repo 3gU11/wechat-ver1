@@ -1145,8 +1145,15 @@ async function listDealerOrders(filters = {}) {
     const params = [];
     const regionalOnly = ["1", "true", "yes"].includes(normalize(filters.regionalOnly).toLowerCase());
     if (regionalOnly && filters.regionalManagerName) {
-      where.push("regional_manager_name = ?");
-      params.push(filters.regionalManagerName);
+      const regionalNames = Array.from(new Set([
+        filters.regionalManagerName,
+        filters.regionalManagerId,
+        filters.regionalManagerCompanyName,
+        filters.regionalManagerContactName,
+        filters.regionalManagerPhone
+      ].map(normalize).filter(Boolean)));
+      where.push(`regional_manager_name IN (${regionalNames.map(() => "?").join(", ")})`);
+      params.push(...regionalNames);
     } else if (filters.dealerId && filters.regionalManagerName) {
       where.push("(dealer_id = ? OR regional_manager_name = ?)");
       params.push(filters.dealerId, filters.regionalManagerName);
@@ -2015,7 +2022,11 @@ const server = http.createServer(async (req, res) => {
         keyword: url.searchParams.get("keyword"),
         page: url.searchParams.get("page"),
         pageSize: url.searchParams.get("pageSize"),
-        regionalOnly: url.searchParams.get("regionalOnly")
+        regionalOnly: url.searchParams.get("regionalOnly"),
+        regionalManagerId: url.searchParams.get("regionalManagerId"),
+        regionalManagerCompanyName: url.searchParams.get("regionalManagerCompanyName"),
+        regionalManagerContactName: url.searchParams.get("regionalManagerContactName"),
+        regionalManagerPhone: url.searchParams.get("regionalManagerPhone")
       };
       if (account.role === "regional_manager") {
         orderFilters.dealerId = account.id;
@@ -2030,7 +2041,11 @@ const server = http.createServer(async (req, res) => {
         keyword: orderFilters.keyword,
         page: orderFilters.page,
         pageSize: orderFilters.pageSize,
-        regionalOnly: orderFilters.regionalOnly
+        regionalOnly: orderFilters.regionalOnly,
+        regionalManagerId: orderFilters.regionalManagerId,
+        regionalManagerCompanyName: orderFilters.regionalManagerCompanyName,
+        regionalManagerContactName: orderFilters.regionalManagerContactName,
+        regionalManagerPhone: orderFilters.regionalManagerPhone
       }));
       return;
     }
