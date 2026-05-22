@@ -606,11 +606,17 @@ async function exchangeWechatCode(code) {
   apiUrl.searchParams.set("grant_type", "authorization_code");
 
   const data = await new Promise((resolve, reject) => {
+    const rejectUnauthorized = !envFlagDisabled(process.env.WECHAT_TLS_REJECT_UNAUTHORIZED);
+    console.log(`[dealer-api] wechat jscode2session tls.rejectUnauthorized=${rejectUnauthorized}`);
     const requestOptions = {
+      protocol: apiUrl.protocol,
+      hostname: apiUrl.hostname,
+      path: `${apiUrl.pathname}${apiUrl.search}`,
+      method: "GET",
       servername: "api.weixin.qq.com",
-      rejectUnauthorized: !envFlagDisabled(process.env.WECHAT_TLS_REJECT_UNAUTHORIZED)
+      agent: new https.Agent({ rejectUnauthorized })
     };
-    const request = https.get(apiUrl, requestOptions, response => {
+    const request = https.get(requestOptions, response => {
       let body = "";
       response.on("data", chunk => { body += chunk; });
       response.on("end", () => {
@@ -621,7 +627,10 @@ async function exchangeWechatCode(code) {
         }
       });
     });
-    request.on("error", reject);
+    request.on("error", err => {
+      console.error("[dealer-api] wechat jscode2session request error:", err && err.message ? err.message : err);
+      reject(err);
+    });
     request.setTimeout(8000, () => {
       request.destroy(new Error("微信登录接口超时"));
     });
