@@ -51,10 +51,14 @@ function request(options) {
           resolve(res.data);
         },
         fail(err) {
-          reject(err);
+          reject(new Error((err && (err.errMsg || err.message)) || "云托管请求失败"));
         }
       });
     });
+  }
+
+  if (cloudEnv && cloudService) {
+    return Promise.reject(new Error("云托管调用不可用，请检查微信开发者工具基础库和云开发环境"));
   }
 
   return new Promise((resolve, reject) => {
