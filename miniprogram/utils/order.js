@@ -1,4 +1,12 @@
-const COMPLETED_STATUSES = ["complete", "completed"];
+const COMPLETED_STATUSES = ["complete", "completed", "done", "finish", "finished"];
+const STATUS_ALIASES = {
+  complete: "completed",
+  done: "completed",
+  finish: "completed",
+  finished: "completed",
+  reject: "rejected",
+  regional_reject: "regional_rejected"
+};
 
 function text(value) {
   if (value === null || value === undefined) return "";
@@ -9,15 +17,20 @@ function isCompletedStatus(status) {
   return COMPLETED_STATUSES.indexOf(text(status).toLowerCase()) !== -1;
 }
 
-function isRejectedStatus(status) {
+function normalizeStatus(status) {
   const value = text(status).toLowerCase();
+  return STATUS_ALIASES[value] || value;
+}
+
+function isRejectedStatus(status) {
+  const value = normalizeStatus(status);
   return value === "reject" || value === "rejected" || value.endsWith("_reject") || value.endsWith("_rejected");
 }
 
 function getDisplayStatus(order) {
   if (isCompletedStatus(order && order.status)) return "completed";
   if (order && Number(order.factoryPending || 0) === 1) return "factory_pending";
-  return text(order && order.status);
+  return normalizeStatus(order && order.status);
 }
 
 function canEditExtraRemark(order) {
@@ -88,6 +101,7 @@ function orderMatchesStatus(order, status) {
 module.exports = {
   isCompletedStatus,
   isRejectedStatus,
+  normalizeStatus,
   getDisplayStatus,
   canEditExtraRemark,
   formatInventoryType,

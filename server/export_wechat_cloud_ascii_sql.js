@@ -175,6 +175,10 @@ async function main() {
   \`delivery_date\` varchar(64) DEFAULT '',
   \`remark\` text,
   \`status\` varchar(32) NOT NULL DEFAULT 'pending',
+  \`regional_review_status\` varchar(32) NOT NULL DEFAULT 'pending',
+  \`regional_review_note\` text,
+  \`regional_reviewed_by\` varchar(128) DEFAULT '',
+  \`regional_reviewed_at\` datetime DEFAULT NULL,
   \`reviewed_at\` datetime DEFAULT NULL,
   \`reviewed_by\` varchar(128) DEFAULT '',
   \`contract_no\` varchar(128) DEFAULT '',
@@ -215,6 +219,22 @@ async function main() {
   UNIQUE KEY \`event_id\` (\`event_id\`),
   KEY \`idx_sync_events_order\` (\`order_no\`),
   KEY \`idx_sync_events_status\` (\`status\`, \`id\`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;`);
+
+  output.push("DROP TABLE IF EXISTS `dealer_order_status_callbacks`;");
+  output.push(`CREATE TABLE \`dealer_order_status_callbacks\` (
+  \`id\` bigint unsigned NOT NULL AUTO_INCREMENT,
+  \`idempotency_key\` varchar(128) NOT NULL,
+  \`order_no\` varchar(64) NOT NULL,
+  \`source\` varchar(32) NOT NULL DEFAULT 'v8',
+  \`status\` varchar(32) NOT NULL,
+  \`payload_json\` json NOT NULL,
+  \`created_at\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  \`applied_at\` datetime DEFAULT NULL,
+  PRIMARY KEY (\`id\`),
+  UNIQUE KEY \`idempotency_key\` (\`idempotency_key\`),
+  KEY \`idx_status_callbacks_order\` (\`order_no\`),
+  KEY \`idx_status_callbacks_status\` (\`status\`, \`id\`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;`);
 
   output.push("DROP TABLE IF EXISTS `model_dictionary`;");

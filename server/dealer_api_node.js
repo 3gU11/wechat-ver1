@@ -35,9 +35,41 @@ loadEnvFile();
 const PORT = Number(process.env.PORT || 8001);
 const TABLE_NAME = "wechat_batch_summary";
 const ORDER_HOLD_STATUSES = ["regional_pending", "pending", "approved"];
+const ORDER_STATUS = Object.freeze({
+  REGIONAL_PENDING: "regional_pending",
+  PENDING: "pending",
+  APPROVED: "approved",
+  FACTORY_PENDING: "factory_pending",
+  CONTRACTED: "contracted",
+  PARTIAL_ALLOCATED: "partial_allocated",
+  ALLOCATED: "allocated",
+  COMPLETED: "completed",
+  REJECTED: "rejected",
+  REGIONAL_REJECTED: "regional_rejected"
+});
+const ORDER_STATUS_ALIASES = new Map([
+  ["complete", ORDER_STATUS.COMPLETED],
+  ["done", ORDER_STATUS.COMPLETED],
+  ["finish", ORDER_STATUS.COMPLETED],
+  ["finished", ORDER_STATUS.COMPLETED],
+  ["reject", ORDER_STATUS.REJECTED],
+  ["rejected", ORDER_STATUS.REJECTED],
+  ["regional_reject", ORDER_STATUS.REGIONAL_REJECTED],
+  ["regional_rejected", ORDER_STATUS.REGIONAL_REJECTED]
+]);
+const WRITABLE_FACTORY_STATUSES = new Set([
+  ORDER_STATUS.PENDING,
+  ORDER_STATUS.APPROVED,
+  ORDER_STATUS.FACTORY_PENDING,
+  ORDER_STATUS.CONTRACTED,
+  ORDER_STATUS.PARTIAL_ALLOCATED,
+  ORDER_STATUS.ALLOCATED,
+  ORDER_STATUS.COMPLETED,
+  ORDER_STATUS.REJECTED
+]);
 const PASSWORD_HASH_PREFIX = "scrypt$";
 const AUTH_TOKEN_PREFIX = "rjv1.";
-const API_BUILD = "wechat-login-20260522";
+const API_BUILD = "wechat-v8-sync-20260523";
 
 function parseMysqlAddress(address) {
   const text = normalize(address);
@@ -96,6 +128,30 @@ function normalize(value) {
     return value.toISOString().slice(0, 10);
   }
   return String(value).trim();
+}
+
+function normalizeOrderStatus(status) {
+  const value = normalize(status).toLowerCase();
+  return ORDER_STATUS_ALIASES.get(value) || value;
+}
+
+function publicOrderStatusMapping() {
+  return {
+    statuses: {
+      regional_pending: "Dealer submitted an unallocated demand order; regional manager must allocate batches first.",
+      pending: "Order lines have concrete batches and are waiting for factory review.",
+      approved: "Factory approved the order or line.",
+      factory_pending: "Dealer changed factory-facing extra remarks and V8 must review them.",
+      contracted: "V8 converted the order to contract.",
+      partial_allocated: "Some lines or quantities have been allocated or completed.",
+      allocated: "All effective lines have been allocated.",
+      completed: "V8 marked all effective lines complete.",
+      rejected: "Factory rejected the order or line.",
+      regional_rejected: "Regional manager rejected the unallocated demand order."
+    },
+    inventorySource: TABLE_NAME,
+    activeHoldStatuses: ORDER_HOLD_STATUSES.slice()
+  };
 }
 
 function hashPassword(password) {
@@ -469,12 +525,30 @@ async function ensureDealerOrderSyncEventsTable(connection) {
   `);
 }
 
+async function ensureDealerOrderStatusCallbacksTable(connection) {
+  await connection.query(`
+    CREATE TABLE IF NOT EXISTS dealer_order_status_callbacks (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      idempotency_key VARCHAR(128) NOT NULL UNIQUE,
+      order_no VARCHAR(64) NOT NULL,
+      source VARCHAR(32) NOT NULL DEFAULT 'v8',
+      status VARCHAR(32) NOT NULL,
+      payload_json JSON NOT NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      applied_at DATETIME NULL,
+      KEY idx_status_callbacks_order (order_no),
+      KEY idx_status_callbacks_status (status, id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `);
+}
+
 async function ensureSupportSchema(connection) {
   await ensureSchemaMigrationsTable(connection);
   await ensureDealerOrderSyncEventsTable(connection);
+  await ensureDealerOrderStatusCallbacksTable(connection);
   await connection.query(
-    "INSERT IGNORE INTO schema_migrations (version) VALUES (?)",
-    ["20260522_001_dealer_order_sync_foundation"]
+    "INSERT IGNORE INTO schema_migrations (version) VALUES (?), (?)",
+    ["20260522_001_dealer_order_sync_foundation", "20260523_002_v8_sync_visibility"]
   );
 }
 
@@ -1085,8 +1159,8 @@ async function createDealerOrder(payload) {
     await ensureDealerOrdersTable(connection);
     await ensureSupportSchema(connection);
     await connection.beginTransaction();
-    const initialStatus = allItemsHaveBatch ? "pending" : "regional_pending";
-    const regionalReviewStatus = allItemsHaveBatch ? "approved" : "pending";
+    const initialStatus = allItemsHaveBatch ? ORDER_STATUS.PENDING : ORDER_STATUS.REGIONAL_PENDING;
+    const regionalReviewStatus = allItemsHaveBatch ? ORDER_STATUS.APPROVED : ORDER_STATUS.PENDING;
     for (let index = 0; index < items.length; index += 1) {
       const item = items[index];
       await connection.query(
@@ -1118,7 +1192,7 @@ async function createDealerOrder(payload) {
     }
     await createDealerOrderSyncEvent(connection, order.orderNo, "dealer_order.created", {
       orderNo: order.orderNo,
-      status: allItemsHaveBatch ? "pending" : "regional_pending",
+      status: initialStatus,
       itemCount: items.length
     });
     await connection.commit();
@@ -1131,7 +1205,7 @@ async function createDealerOrder(payload) {
 
   return {
     id: order.orderNo,
-    status: allItemsHaveBatch ? "pending" : "regional_pending",
+    status: allItemsHaveBatch ? ORDER_STATUS.PENDING : ORDER_STATUS.REGIONAL_PENDING,
     itemCount: items.length,
     message: allItemsHaveBatch ? "订单已提交，已进入工厂审核" : "订单已提交，等待大区经理初审",
   };
@@ -1224,34 +1298,34 @@ async function listDealerOrders(filters = {}) {
     }
 
     let orders = Array.from(grouped.values()).map(order => {
-      const allStatuses = order.items.map(item => normalize(item.status).toLowerCase()).filter(Boolean);
-      const reviewStatuses = order.items.map(item => normalize(item.regionalReviewStatus).toLowerCase()).filter(Boolean);
+      const allStatuses = order.items.map(item => normalizeOrderStatus(item.status)).filter(Boolean);
+      const reviewStatuses = order.items.map(item => normalizeOrderStatus(item.regionalReviewStatus)).filter(Boolean);
       const anyRejected = allStatuses.some(isRejectedStatus) || reviewStatuses.some(isRejectedStatus);
-      const rejectedStatus = allStatuses.includes("regional_rejected") || reviewStatuses.some(isRejectedStatus)
-        ? "regional_rejected"
-        : "rejected";
+      const rejectedStatus = allStatuses.includes(ORDER_STATUS.REGIONAL_REJECTED) || reviewStatuses.some(isRejectedStatus)
+        ? ORDER_STATUS.REGIONAL_REJECTED
+        : ORDER_STATUS.REJECTED;
       const statusItems = order.items.filter(item => Number(item.quantity || 0) > 0);
       const effectiveItems = statusItems.length ? statusItems : order.items;
-      const statuses = effectiveItems.map(item => normalize(item.status).toLowerCase());
-      const isCompletedStatus = status => status === "completed" || status === "complete";
+      const statuses = effectiveItems.map(item => normalizeOrderStatus(item.status));
+      const isCompletedStatus = status => status === ORDER_STATUS.COMPLETED;
       const allCompleted = statuses.length > 0 && statuses.every(isCompletedStatus);
       const anyCompleted = statuses.some(isCompletedStatus);
-      const allAllocated = statuses.every(status => status === "allocated");
-      const anyAllocated = effectiveItems.some(item => normalize(item.status).toLowerCase() === "allocated" || Number(item.allocatedQty || 0) > 0);
-      const anyApproved = statuses.includes("approved");
+      const allAllocated = statuses.every(status => status === ORDER_STATUS.ALLOCATED);
+      const anyAllocated = effectiveItems.some(item => normalizeOrderStatus(item.status) === ORDER_STATUS.ALLOCATED || Number(item.allocatedQty || 0) > 0);
+      const anyApproved = statuses.includes(ORDER_STATUS.APPROVED) || statuses.includes(ORDER_STATUS.CONTRACTED);
       const anyFactoryPending = effectiveItems.some(item => Number(item.factoryPending || 0) === 1);
       const status = anyRejected
         ? rejectedStatus
         : allCompleted
-          ? "completed"
+          ? ORDER_STATUS.COMPLETED
           : anyCompleted
-            ? "partial_allocated"
+            ? ORDER_STATUS.PARTIAL_ALLOCATED
             : allAllocated
-              ? "allocated"
+              ? ORDER_STATUS.ALLOCATED
               : anyAllocated
-                ? "partial_allocated"
+                ? ORDER_STATUS.PARTIAL_ALLOCATED
                 : anyApproved
-                  ? "approved"
+                  ? (statuses.includes(ORDER_STATUS.CONTRACTED) ? ORDER_STATUS.CONTRACTED : ORDER_STATUS.APPROVED)
                   : statuses[0];
       return Object.assign({}, order, {
         status,
@@ -1295,13 +1369,12 @@ async function listDealerOrders(filters = {}) {
 }
 
 function isRejectedStatus(status) {
-  const value = normalize(status).toLowerCase();
-  return value === "rejected" || value === "reject" || value.endsWith("_rejected") || value.endsWith("_reject");
+  const value = normalizeOrderStatus(status);
+  return value === ORDER_STATUS.REJECTED || value === ORDER_STATUS.REGIONAL_REJECTED || value.endsWith("_rejected") || value.endsWith("_reject");
 }
 
 function isCompletedOrderStatus(status) {
-  const value = normalize(status).toLowerCase();
-  return value === "complete" || value === "completed";
+  return normalizeOrderStatus(status) === ORDER_STATUS.COMPLETED;
 }
 
 async function updateDealerOrderExtraRemarks(orderNo, payload, account = null) {
@@ -1400,13 +1473,13 @@ async function updateDealerOrderExtraRemarks(orderNo, payload, account = null) {
 }
 
 async function reviewDealerOrderByRegionalManager(orderNo, payload) {
-  const nextStatus = normalize(payload.status);
-  if (!["approved", "rejected"].includes(nextStatus)) {
+  const nextStatus = normalizeOrderStatus(payload.status);
+  if (![ORDER_STATUS.APPROVED, ORDER_STATUS.REJECTED].includes(nextStatus)) {
     const err = new Error("审核状态只能是 approved 或 rejected");
     err.statusCode = 400;
     throw err;
   }
-  if (nextStatus === "approved") {
+  if (nextStatus === ORDER_STATUS.APPROVED) {
     const err = new Error("请先分配具体批次，再提交工厂审核");
     err.statusCode = 400;
     throw err;
@@ -1416,13 +1489,13 @@ async function reviewDealerOrderByRegionalManager(orderNo, payload) {
   const reviewerName = normalize(payload.reviewerName || payload.reviewedBy || regionalManagerName);
   const note = normalize(payload.note || payload.regionalReviewNote || "");
   const orderId = requireText(orderNo, "订单号");
-  const finalStatus = nextStatus === "approved" ? "pending" : "regional_rejected";
+  const finalStatus = nextStatus === ORDER_STATUS.APPROVED ? ORDER_STATUS.PENDING : ORDER_STATUS.REGIONAL_REJECTED;
 
   const connection = await mysql.createConnection(dbConfig);
   try {
     await ensureDealerOrdersTable(connection);
     await ensureSupportSchema(connection);
-    const where = ["order_no = ?", "status = 'regional_pending'"];
+    const where = ["order_no = ?", "status = ?"];
     const params = [orderId];
     if (regionalManagerName) {
       where.push("regional_manager_name = ?");
@@ -1436,14 +1509,14 @@ async function reviewDealerOrderByRegionalManager(orderNo, payload) {
            regional_reviewed_by = ?,
            regional_reviewed_at = NOW()
        WHERE ${where.join(" AND ")}`,
-      [finalStatus, nextStatus, note, reviewerName].concat(params)
+      [finalStatus, nextStatus, note, reviewerName].concat([orderId, ORDER_STATUS.REGIONAL_PENDING], params.slice(1))
     );
     if (!result.affectedRows) {
       const err = new Error("订单不存在、已审核，或不属于当前大区经理");
       err.statusCode = 404;
       throw err;
     }
-    await createDealerOrderSyncEvent(connection, orderId, nextStatus === "approved" ? "dealer_order.regional_approved" : "dealer_order.regional_rejected", {
+    await createDealerOrderSyncEvent(connection, orderId, nextStatus === ORDER_STATUS.APPROVED ? "dealer_order.regional_approved" : "dealer_order.regional_rejected", {
       orderNo: orderId,
       status: finalStatus,
       reviewedBy: reviewerName,
@@ -1453,7 +1526,7 @@ async function reviewDealerOrderByRegionalManager(orderNo, payload) {
       id: orderId,
       status: finalStatus,
       regionalReviewStatus: nextStatus,
-      message: nextStatus === "approved" ? "初审通过，已进入工厂审核" : "订单已驳回"
+      message: nextStatus === ORDER_STATUS.APPROVED ? "初审通过，已进入工厂审核" : "订单已驳回"
     };
   } finally {
     await connection.end();
@@ -1478,8 +1551,8 @@ async function allocateDealerOrderByRegionalManager(orderNo, payload) {
     await ensureSupportSchema(connection);
     await connection.beginTransaction();
 
-    const where = ["order_no = ?", "status = 'regional_pending'"];
-    const params = [orderId];
+    const where = ["order_no = ?", "status = ?"];
+    const params = [orderId, ORDER_STATUS.REGIONAL_PENDING];
     if (regionalManagerName) {
       where.push("regional_manager_name = ?");
       params.push(regionalManagerName);
@@ -1574,7 +1647,7 @@ async function allocateDealerOrderByRegionalManager(orderNo, payload) {
     }
 
     const header = rows[0];
-    await connection.query("DELETE FROM dealer_orders WHERE order_no = ? AND status = 'regional_pending'", [orderId]);
+    await connection.query("DELETE FROM dealer_orders WHERE order_no = ? AND status = ?", [orderId, ORDER_STATUS.REGIONAL_PENDING]);
     for (let index = 0; index < allocations.length; index += 1) {
       const item = allocations[index];
       await connection.query(
@@ -1582,8 +1655,8 @@ async function allocateDealerOrderByRegionalManager(orderNo, payload) {
          (order_no, line_no, dealer_id, dealer_name, dealer_phone, regional_manager_name, customer_name, contact_name, contact_phone,
           model, batch_no, eta, inventory_type, quantity, approved_qty, allocated_qty, delivery_date, remark, status,
           regional_review_status, regional_review_note, regional_reviewed_by, regional_reviewed_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, 'pending',
-          'approved', ?, ?, NOW())`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, ?,
+          ?, ?, ?, NOW())`,
         [
           orderId,
           index + 1,
@@ -1601,6 +1674,8 @@ async function allocateDealerOrderByRegionalManager(orderNo, payload) {
           item.quantity,
           header.delivery_date,
           header.remark,
+          ORDER_STATUS.PENDING,
+          ORDER_STATUS.APPROVED,
           note,
           reviewerName
         ]
@@ -1614,10 +1689,159 @@ async function allocateDealerOrderByRegionalManager(orderNo, payload) {
     await connection.commit();
     return {
       id: orderId,
-      status: "pending",
+      status: ORDER_STATUS.PENDING,
       itemCount: allocations.length,
       message: "批次已分配，订单已进入工厂审核"
     };
+  } catch (err) {
+    try { await connection.rollback(); } catch (rollbackErr) {}
+    throw err;
+  } finally {
+    await connection.end();
+  }
+}
+
+function requireSyncWriter(req) {
+  const secret = normalize(process.env.CLOUD_SYNC_SECRET || process.env.V8_SYNC_SECRET);
+  if (secret) {
+    const provided = normalize(req.headers["x-sync-secret"] || req.headers["x-v8-sync-secret"]);
+    const providedBuffer = Buffer.from(provided);
+    const secretBuffer = Buffer.from(secret);
+    if (providedBuffer.length === secretBuffer.length && crypto.timingSafeEqual(providedBuffer, secretBuffer)) {
+      return;
+    }
+    const err = new Error("同步密钥无效");
+    err.statusCode = 403;
+    throw err;
+  }
+  requireAdminRequest(req);
+}
+
+function callbackIdempotencyKey(req, orderNo, payload) {
+  const headerKey = normalize(req.headers["idempotency-key"] || req.headers["x-idempotency-key"]);
+  if (headerKey) {
+    return headerKey.slice(0, 128);
+  }
+  const bodyKey = normalize(payload.idempotencyKey || payload.eventId || payload.outboxId);
+  if (bodyKey) {
+    return bodyKey.slice(0, 128);
+  }
+  return crypto.createHash("sha256")
+    .update(`${orderNo}|${normalize(payload.status)}|${normalize(payload.updatedAt)}|${JSON.stringify(payload.items || [])}`)
+    .digest("hex");
+}
+
+async function applyV8OrderStatusCallback(orderNo, payload, req) {
+  const orderId = requireText(orderNo, "订单号");
+  const status = normalizeOrderStatus(payload.status);
+  if (!WRITABLE_FACTORY_STATUSES.has(status)) {
+    const err = new Error(`工厂状态不合法: ${status || "(empty)"}`);
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const idempotencyKey = callbackIdempotencyKey(req, orderId, payload);
+  const contractNo = normalize(payload.contractNo || payload.contract_no);
+  const v7OrderNo = normalize(payload.v7OrderNo || payload.v7_order_no);
+  const reviewNote = normalize(payload.reviewNote || payload.note);
+  const reviewedBy = normalize(payload.reviewedBy || payload.operator || payload.updatedBy);
+  const rawItems = Array.isArray(payload.items) ? payload.items : [];
+
+  const connection = await mysql.createConnection(dbConfig);
+  try {
+    await ensureDealerOrdersTable(connection);
+    await ensureSupportSchema(connection);
+    await connection.beginTransaction();
+
+    const [exists] = await connection.query(
+      "SELECT id, status, applied_at AS appliedAt FROM dealer_order_status_callbacks WHERE idempotency_key = ? LIMIT 1 FOR UPDATE",
+      [idempotencyKey]
+    );
+    if (exists.length) {
+      await connection.commit();
+      return {
+        success: true,
+        duplicate: true,
+        idempotencyKey,
+        status: exists[0].status,
+        appliedAt: exists[0].appliedAt
+      };
+    }
+
+    const [orderRows] = await connection.query(
+      "SELECT line_no FROM dealer_orders WHERE order_no = ? FOR UPDATE",
+      [orderId]
+    );
+    if (!orderRows.length) {
+      const err = new Error("订单不存在");
+      err.statusCode = 404;
+      throw err;
+    }
+
+    await connection.query(
+      `INSERT INTO dealer_order_status_callbacks
+        (idempotency_key, order_no, source, status, payload_json)
+       VALUES (?, ?, 'v8', ?, CAST(? AS JSON))`,
+      [idempotencyKey, orderId, status, JSON.stringify(payload, null, 0)]
+    );
+
+    const commonSets = [
+      "status = ?",
+      "contract_no = COALESCE(NULLIF(?, ''), contract_no)",
+      "v7_order_no = COALESCE(NULLIF(?, ''), v7_order_no)",
+      "review_note = COALESCE(NULLIF(?, ''), review_note)",
+      "reviewed_by = COALESCE(NULLIF(?, ''), reviewed_by)",
+      "reviewed_at = COALESCE(reviewed_at, NOW())",
+      "factory_reviewed_by = COALESCE(NULLIF(?, ''), factory_reviewed_by)",
+      "factory_reviewed_at = CASE WHEN ? IN ('approved', 'rejected') THEN COALESCE(factory_reviewed_at, NOW()) ELSE factory_reviewed_at END",
+      "factory_pending = 0",
+      "sync_status = 'synced'",
+      "sync_error = NULL",
+      "last_synced_at = NOW()"
+    ];
+
+    if (rawItems.length) {
+      const validLines = new Set(orderRows.map(row => Number(row.line_no)));
+      for (const item of rawItems) {
+        const lineNo = Math.trunc(Number(item.lineNo || item.line_no));
+        if (!validLines.has(lineNo)) {
+          const err = new Error(`订单行不存在: ${lineNo}`);
+          err.statusCode = 400;
+          throw err;
+        }
+        const allocatedQty = Math.max(0, Math.trunc(Number(item.allocatedQty || item.allocated_qty || 0)));
+        const approvedQty = Math.max(0, Math.trunc(Number(item.approvedQty || item.approved_qty || 0)));
+        await connection.query(
+          `UPDATE dealer_orders
+           SET ${commonSets.join(", ")},
+               allocated_qty = IF(? > 0, ?, allocated_qty),
+               approved_qty = IF(? > 0, ?, approved_qty)
+           WHERE order_no = ? AND line_no = ?`,
+          [status, contractNo, v7OrderNo, reviewNote, reviewedBy, reviewedBy, status, allocatedQty, allocatedQty, approvedQty, approvedQty, orderId, lineNo]
+        );
+      }
+    } else {
+      await connection.query(
+        `UPDATE dealer_orders
+         SET ${commonSets.join(", ")}
+         WHERE order_no = ?`,
+        [status, contractNo, v7OrderNo, reviewNote, reviewedBy, reviewedBy, status, orderId]
+      );
+    }
+
+    if (status === ORDER_STATUS.COMPLETED) {
+      await connection.query(
+        "UPDATE dealer_orders SET allocated_qty = GREATEST(allocated_qty, quantity), approved_qty = GREATEST(approved_qty, quantity) WHERE order_no = ?",
+        [orderId]
+      );
+    }
+
+    await connection.query(
+      "UPDATE dealer_order_status_callbacks SET applied_at = NOW() WHERE idempotency_key = ?",
+      [idempotencyKey]
+    );
+    await connection.commit();
+    return { success: true, duplicate: false, id: orderId, status, idempotencyKey };
   } catch (err) {
     try { await connection.rollback(); } catch (rollbackErr) {}
     throw err;
@@ -1910,12 +2134,98 @@ async function listModelOptions() {
   return rows.map(row => row.model).filter(Boolean).sort((a, b) => compareModels(a, b, sortMap));
 }
 
+async function tableExists(connection, tableName) {
+  const [rows] = await connection.query(
+    `SELECT COUNT(*) AS count
+     FROM information_schema.tables
+     WHERE table_schema = DATABASE() AND table_name = ?`,
+    [tableName]
+  );
+  return Number(rows[0] && rows[0].count || 0) > 0;
+}
+
+async function inventoryLastUpdated(connection) {
+  if (!(await tableExists(connection, TABLE_NAME))) {
+    return null;
+  }
+  const [columns] = await connection.query(`SHOW COLUMNS FROM \`${TABLE_NAME}\``);
+  const names = columns.map(column => column.Field);
+  const candidates = ["updated_at", "synced_at", "last_synced_at", "created_at"];
+  const selected = candidates.find(name => names.includes(name));
+  if (!selected) {
+    return null;
+  }
+  const [rows] = await connection.query(
+    `SELECT DATE_FORMAT(MAX(\`${selected}\`), '%Y-%m-%d %H:%i:%s') AS lastUpdated FROM \`${TABLE_NAME}\``
+  );
+  return rows.length ? rows[0].lastUpdated : null;
+}
+
+async function statusCounts(connection, tableName, statusColumn = "status") {
+  if (!(await tableExists(connection, tableName))) {
+    return { pending: 0, failed: 0, available: false };
+  }
+  const [rows] = await connection.query(
+    `SELECT LOWER(\`${statusColumn}\`) AS status, COUNT(*) AS count
+     FROM \`${tableName}\`
+     WHERE LOWER(\`${statusColumn}\`) IN ('pending', 'failed', 'error')
+     GROUP BY LOWER(\`${statusColumn}\`)`
+  );
+  const counts = { pending: 0, failed: 0, available: true };
+  for (const row of rows) {
+    const status = normalize(row.status);
+    if (status === "pending") counts.pending += Number(row.count || 0);
+    if (status === "failed" || status === "error") counts.failed += Number(row.count || 0);
+  }
+  return counts;
+}
+
+async function healthStatus() {
+  let connection = null;
+  try {
+    connection = await mysql.createConnection(dbConfig);
+    await connection.query("SELECT 1");
+    await ensureSupportSchema(connection);
+    return {
+      status: "ok",
+      build: API_BUILD,
+      database: { ok: true },
+      inventory: {
+        source: TABLE_NAME,
+        lastUpdatedAt: await inventoryLastUpdated(connection)
+      },
+      sync: {
+        dealerOrderEvents: await statusCounts(connection, "dealer_order_sync_events"),
+        cloudSyncOutbox: await statusCounts(connection, "cloud_sync_outbox")
+      },
+      mapping: publicOrderStatusMapping()
+    };
+  } catch (err) {
+    console.error("[dealer-api] health check degraded:", err && err.message ? err.message : err);
+    return {
+      status: "degraded",
+      build: API_BUILD,
+      database: { ok: false },
+      inventory: { source: TABLE_NAME, lastUpdatedAt: null },
+      sync: {
+        dealerOrderEvents: { pending: 0, failed: 0, available: false },
+        cloudSyncOutbox: { pending: 0, failed: 0, available: false }
+      },
+      mapping: publicOrderStatusMapping()
+    };
+  } finally {
+    try {
+      if (connection) await connection.end();
+    } catch (err) {}
+  }
+}
+
 function sendJson(res, statusCode, data) {
   res.writeHead(statusCode, {
     "Content-Type": "application/json; charset=utf-8",
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type,Authorization"
+    "Access-Control-Allow-Headers": "Content-Type,Authorization,Idempotency-Key,X-Idempotency-Key,X-Sync-Secret,X-V8-Sync-Secret"
   });
   res.end(JSON.stringify(data));
 }
@@ -2015,6 +2325,13 @@ const server = http.createServer(async (req, res) => {
       sendJson(res, 200, await updateDealerOrderExtraRemarks(decodeURIComponent(extraRemarkMatch[1]), payload, account));
       return;
     }
+    const v8StatusMatch = url.pathname.match(/^\/api\/dealer\/orders\/([^/]+)\/v8-status$/);
+    if (v8StatusMatch && req.method === "POST") {
+      requireSyncWriter(req);
+      const payload = await readJsonBody(req);
+      sendJson(res, 200, await applyV8OrderStatusCallback(decodeURIComponent(v8StatusMatch[1]), payload, req));
+      return;
+    }
     if (url.pathname === "/api/dealer/orders" && req.method === "GET") {
       const account = await loadAccountByToken(req);
       const orderFilters = {
@@ -2050,7 +2367,11 @@ const server = http.createServer(async (req, res) => {
       return;
     }
     if (url.pathname === "/api/dealer/health") {
-      sendJson(res, 200, { status: "ok", build: API_BUILD, database: dbConfig.database, table: TABLE_NAME });
+      sendJson(res, 200, await healthStatus());
+      return;
+    }
+    if (url.pathname === "/api/dealer/status-mapping") {
+      sendJson(res, 200, publicOrderStatusMapping());
       return;
     }
     if (url.pathname === "/api/dealer/debug/columns") {
