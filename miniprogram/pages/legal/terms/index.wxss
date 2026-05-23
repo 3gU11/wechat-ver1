@@ -1,0 +1,33 @@
+.legal-page {
+  padding-bottom: 48rpx;
+}
+
+.updated {
+  margin-bottom: 20rpx;
+  color: #66758f;
+  font-size: 24rpx;
+  line-height: 1.5;
+}
+
+.legal-card {
+  padding: 28rpx;
+}
+
+.heading {
+  margin-top: 28rpx;
+  color: #14366f;
+  font-size: 30rpx;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.heading:first-child {
+  margin-top: 0;
+}
+
+.paragraph {
+  margin-top: 14rpx;
+  color: #172033;
+  font-size: 28rpx;
+  line-height: 1.7;
+}

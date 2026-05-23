@@ -71,6 +71,19 @@ input {
   margin-top: 24rpx;
 }
 
+.login-agreement {
+  margin-top: 18rpx;
+  color: #66758f;
+  font-size: 24rpx;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.agreement-link {
+  color: #1f4f9a;
+  font-weight: 700;
+}
+
 .status-text {
   margin-top: 18rpx;
   padding: 18rpx 20rpx;

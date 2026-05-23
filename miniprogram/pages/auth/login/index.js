@@ -43,6 +43,13 @@ Page({
     this.setData({ adminPassword: e.detail.value });
   },
 
+  openAgreement(e) {
+    const type = e.currentTarget.dataset.type;
+    wx.navigateTo({
+      url: type === "privacy" ? "/pages/legal/privacy/index" : "/pages/legal/terms/index"
+    });
+  },
+
   wechatLogin() {
     if (this.data.submitting) return;
     this.setData({ submitting: true, statusText: "正在获取微信登录凭证..." });

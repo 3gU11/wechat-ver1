@@ -20,6 +20,7 @@ Page({
       regionalManagerName: "",
       remark: ""
     },
+    agreedToTerms: false,
     submitting: false
   },
 
@@ -79,6 +80,18 @@ Page({
     });
   },
 
+  onAgreementChange(e) {
+    const values = e.detail.value || [];
+    this.setData({ agreedToTerms: values.indexOf("agree") !== -1 });
+  },
+
+  openAgreement(e) {
+    const type = e.currentTarget.dataset.type;
+    wx.navigateTo({
+      url: type === "privacy" ? "/pages/legal/privacy/index" : "/pages/legal/terms/index"
+    });
+  },
+
   submit() {
     const form = this.data.form;
     if (!form.companyName || !form.phone || !form.contactName || !form.region) {
@@ -91,6 +104,11 @@ Page({
     }
     if (!this.data.openidToken) {
       wx.showToast({ title: "微信注册凭证缺失，请重新登录", icon: "none" });
+      return;
+    }
+
+    if (!this.data.agreedToTerms) {
+      wx.showToast({ title: "请先阅读并同意用户服务协议和隐私政策", icon: "none" });
       return;
     }
 

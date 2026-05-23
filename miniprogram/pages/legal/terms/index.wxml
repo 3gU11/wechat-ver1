@@ -1,0 +1,38 @@
+<view class="page legal-page">
+  <view class="section-title">用户服务协议</view>
+  <view class="updated">更新日期：2026年5月23日　生效日期：2026年5月23日</view>
+
+  <view class="card legal-card">
+    <view class="paragraph">欢迎使用“瑞均经销商门户”微信小程序。您点击同意、注册、登录或继续使用本小程序，即表示您已阅读并同意本协议。</view>
+
+    <view class="heading">一、服务内容</view>
+    <view class="paragraph">本小程序为经销商、区域经理及管理人员提供经销商注册与身份审核、库存及批次查询、订单创建、订单查询、订单状态跟踪、大区经理审核与批次分配，以及与 V8 工厂系统同步订单审核、合同、配货、完成等状态的服务。</view>
+
+    <view class="heading">二、账号注册与使用</view>
+    <view class="paragraph">您应提供真实、准确、完整的注册信息，包括公司名称、联系人、手机号、所在地区、选择瑞钧的理由或合作说明等。注册信息提交后，需经管理员审核通过后方可使用相关功能。</view>
+    <view class="paragraph">您应妥善保管账号、密码、微信登录状态及设备，不得将账号转让、出借或提供给无关人员使用。</view>
+
+    <view class="heading">三、用户行为规范</view>
+    <view class="paragraph">您不得提交虚假订单、虚假客户信息或恶意占用库存，不得冒用他人身份，不得干扰系统运行、攻击接口或将系统数据用于未经授权的用途。</view>
+
+    <view class="heading">四、订单与库存说明</view>
+    <view class="paragraph">小程序展示的库存、批次、预计入库时间等信息来自系统同步数据，仅用于经销商订货参考。订单提交后，最终审核、合同、配货、完成状态以工厂侧 V8 系统及管理人员确认为准。</view>
+    <view class="paragraph">因库存变化、同步延迟、审核结果或生产调整等原因，订单状态和可订数量可能发生变化。</view>
+
+    <view class="heading">五、数据同步说明</view>
+    <view class="paragraph">本小程序会与 V8 工厂管理系统进行数据同步，包括库存汇总、订单状态、合同状态、配货状态和完成状态等。因网络、服务器、微信平台或系统维护导致同步延迟时，页面展示可能存在短暂滞后。</view>
+
+    <view class="heading">六、服务变更、中断或终止</view>
+    <view class="paragraph">因系统维护、升级、网络故障、服务器故障、微信平台政策调整或不可抗力等原因，我们可能暂停、调整或终止部分服务，并尽量降低对用户使用的影响。</view>
+
+    <view class="heading">七、知识产权</view>
+    <view class="paragraph">本小程序相关页面、程序、数据结构、业务流程和系统设计等知识产权归相关权利人所有。未经授权，不得复制、修改、传播、反向工程或用于其他商业用途。</view>
+
+    <view class="heading">八、联系我们</view>
+    <view class="paragraph">公司名称：苏州瑞钧智能科技有限公司</view>
+    <view class="paragraph">联系人：苏州瑞钧智能科技有限公司</view>
+    <view class="paragraph">联系电话：0512-57175508</view>
+    <view class="paragraph">邮箱：ksrjjx@126.com</view>
+    <view class="paragraph">地址：常熟市东南高新区儒浜路78号</view>
+  </view>
+</view>

@@ -40,9 +40,24 @@
       </picker>
     </view>
     <view class="field">
-      <view class="label">备注</view>
-      <textarea placeholder="资质、合作背景或其他说明" data-field="remark" bindinput="onInput"></textarea>
+      <view class="label">选择瑞钧的理由 / 合作说明</view>
+      <textarea placeholder="请填写资质、合作背景、选择瑞钧的理由或其他说明" data-field="remark" bindinput="onInput"></textarea>
     </view>
+  </view>
+
+  <view class="agreement-block">
+    <checkbox-group bindchange="onAgreementChange">
+      <label class="agreement-row">
+        <checkbox value="agree" checked="{{agreedToTerms}}" color="#1F4F9A" />
+        <text class="agreement-text">我已阅读并同意</text>
+      </label>
+    </checkbox-group>
+    <view class="agreement-links">
+      <text class="agreement-link" data-type="terms" bindtap="openAgreement">《用户服务协议》</text>
+      <text class="agreement-text">和</text>
+      <text class="agreement-link" data-type="privacy" bindtap="openAgreement">《隐私政策》</text>
+    </view>
+    <view class="agreement-note">手机号用于经销商身份审核、登录验证、订单联系及业务通知。</view>
   </view>
 
   <button class="primary-btn submit-btn" loading="{{submitting}}" bindtap="submit">提交审核</button>

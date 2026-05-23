@@ -11,6 +11,12 @@
   <view class="login-desc">使用当前微信账号登录。首次使用会进入注册资料填写，管理员审核通过后即可进入小程序。</view>
 
   <button class="primary-btn login-btn" loading="{{submitting}}" bindtap="wechatLogin">微信登录 / 注册</button>
+  <view class="login-agreement">
+    <text>登录或注册即表示您已阅读并同意</text>
+    <text class="agreement-link" data-type="terms" bindtap="openAgreement">《用户服务协议》</text>
+    <text>和</text>
+    <text class="agreement-link" data-type="privacy" bindtap="openAgreement">《隐私政策》</text>
+  </view>
   <view wx:if="{{statusText}}" class="status-text">{{statusText}}</view>
 
   <view class="card form-card">

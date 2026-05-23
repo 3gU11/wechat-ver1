@@ -12,6 +12,8 @@
     "pages/profile/index",
     "pages/auth/login/index",
     "pages/auth/register/index",
+    "pages/legal/privacy/index",
+    "pages/legal/terms/index",
     "pages/admin/reviews/index"
   ],
   "window": {
